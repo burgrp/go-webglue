@@ -166,10 +166,22 @@ func NewHandler(options Options) (http.Handler, error) {
 	indexHtml = strings.ReplaceAll(indexHtml, PlaceholderCss, refStrCss)
 	indexHtml = strings.ReplaceAll(indexHtml, PlaceholderJs, refStrJs)
 
-	return RootHandler{
+	rootHandler := RootHandler{
 		indexHtml:   indexHtml,
 		cachedFiles: cachedFiles,
 		devFiles:    devFiles,
-	}, nil
+	}
+
+	webSocketHandler, err := newWebSocketHandler()
+	if err != nil {
+		return nil, err
+	}
+
+	mux := http.ServeMux{}
+
+	mux.Handle("/", rootHandler)
+	mux.Handle("/socket.io/", webSocketHandler)
+
+	return &mux, nil
 
 }

@@ -10,7 +10,6 @@ import (
 var clientResources embed.FS
 
 func main() {
-	server := http.NewServeMux()
 
 	handler, err := webglue.NewHandler(webglue.Options{
 		Modules: []webglue.Module{
@@ -25,6 +24,10 @@ func main() {
 		panic(err)
 	}
 
+	server := http.NewServeMux()
 	server.Handle("/", handler)
-	http.ListenAndServe(":8080", server)
+	err = http.ListenAndServe(":8080", server)
+	if err != nil {
+		panic(err)
+	}
 }
