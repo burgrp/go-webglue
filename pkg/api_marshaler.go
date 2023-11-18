@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"reflect"
 	"strings"
 )
@@ -11,7 +12,7 @@ import (
 type ApiMarshaler struct {
 }
 
-func NewApiMarshaler(options Options) (*ApiMarshaler, error) {
+func newApiMarshaler(options Options) (*ApiMarshaler, error) {
 	return &ApiMarshaler{}, nil
 }
 
@@ -19,21 +20,32 @@ type ErrorReply struct {
 	Error string `json:"error"`
 }
 
-func MarshalError(err error) []byte {
-	json, err := json.Marshal(ErrorReply{
+func MarshalError(err error, writer io.Writer) {
+	err2 := json.NewEncoder(writer).Encode(ErrorReply{
 		Error: err.Error(),
 	})
-	if err != nil {
+	if err2 != nil {
 		panic(err)
 	}
-	return json
 }
 
 type ResultReply struct {
 	Result any `json:"result"`
 }
 
-func (marshaler *ApiMarshaler) Call(receiver any, ctx context.Context, function string, request []byte) []byte {
+func (marshaler *ApiMarshaler) describe(receiver any, writer io.Writer) {
+
+	modPtrType := (reflect.TypeOf(receiver))
+
+	list := make([]string, modPtrType.NumMethod())
+	for i := 0; i < len(list); i++ {
+		name := modPtrType.Method(i).Name
+		list[i] = strings.ToLower(name[0:1]) + name[1:]
+	}
+	json.NewEncoder(writer).Encode(list)
+}
+
+func (marshaler *ApiMarshaler) call(receiver any, ctx context.Context, function string, reader io.Reader, writer io.Writer) {
 
 	fncGoName := strings.ToUpper(function[0:1]) + function[1:]
 
@@ -41,13 +53,15 @@ func (marshaler *ApiMarshaler) Call(receiver any, ctx context.Context, function 
 
 	fncValue, ok := modPtrType.MethodByName(fncGoName)
 	if !ok {
-		return MarshalError(errors.New("function not found"))
+		MarshalError(errors.New("function not found"), writer)
+		return
 	}
 
 	fncType := fncValue.Type
 
 	if fncType.NumIn() < 1 {
-		return MarshalError(errors.New("function must have receiver"))
+		MarshalError(errors.New("function must have receiver"), writer)
+		return
 	}
 
 	numIn := fncType.NumIn()
@@ -79,13 +93,15 @@ func (marshaler *ApiMarshaler) Call(receiver any, ctx context.Context, function 
 
 	beforeUnmarshal := len(unmParams)
 
-	err := json.Unmarshal(request, &unmParams)
+	err := json.NewDecoder(reader).Decode(&unmParams)
 	if err != nil {
-		return MarshalError(err)
+		MarshalError(err, writer)
+		return
 	}
 
 	if len(unmParams) != beforeUnmarshal {
-		return MarshalError(errors.New("wrong number of parameters"))
+		MarshalError(errors.New("wrong number of parameters"), writer)
+		return
 	}
 
 	for i := 0; i < len(unmParams); i++ {
@@ -98,7 +114,8 @@ func (marshaler *ApiMarshaler) Call(receiver any, ctx context.Context, function 
 	for _, result := range allResults {
 		if result.Type().AssignableTo(reflect.TypeOf((*error)(nil)).Elem()) {
 			if !result.IsNil() {
-				return MarshalError(result.Interface().(error))
+				MarshalError(result.Interface().(error), writer)
+				return
 			}
 		} else {
 			results = append(results, result.Interface())
@@ -115,10 +132,9 @@ func (marshaler *ApiMarshaler) Call(receiver any, ctx context.Context, function 
 		resultReply.Result = results
 	}
 
-	resultJson, err := json.Marshal(resultReply)
+	err = json.NewEncoder(writer).Encode(resultReply)
 	if err != nil {
-		return MarshalError(err)
+		MarshalError(err, writer)
+		return
 	}
-
-	return resultJson
 }

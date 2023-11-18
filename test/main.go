@@ -12,7 +12,8 @@ import (
 var clientResources embed.FS
 
 type TestSession struct {
-	Id string
+	Id      string
+	Counter int
 }
 
 func (session *TestSession) Add(a struct{ V int }, b int) any {
@@ -39,6 +40,11 @@ func (session *TestSession) GetId() string {
 	return session.Id
 }
 
+func (session *TestSession) Inc(inc int) int {
+	session.Counter += inc
+	return session.Counter
+}
+
 func main() {
 
 	options := webglue.Options{
@@ -54,26 +60,6 @@ func main() {
 			}
 		},
 	}
-
-	// apiMarshaler, err := webglue.NewApiMarshaler(options)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// ctx := context.Background()
-
-	// session := &TestSession{
-	// 	Id: "1",
-	// }
-
-	// result := apiMarshaler.Call(session, ctx, "div", []byte(`[5, 2]`))
-	// println("result: " + string(result))
-
-	// result = apiMarshaler.Call(session, ctx, "greet", []byte(`[{"name": "John"}]`))
-	// println("result: " + string(result))
-
-	// result = apiMarshaler.Call(session, ctx, "getId", []byte(`[]`))
-	// println("result: " + string(result))
 
 	handler, err := webglue.NewHandler(options)
 

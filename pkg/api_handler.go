@@ -1,86 +1,84 @@
 package webglue
 
 import (
-	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
 
 const (
-	SessionHeader = "Webglue-Session"
+	SessionHeader       = "Webglue-Session"
+	ContentTypeHeader   = "Content-Type"
+	ContentTypeJson     = "application/json"
+	ContentLengthHeader = "Content-Length"
 )
 
+type SessionAndTimestamp struct {
+	Session   any
+	Timestamp time.Time
+}
+
 type ApiHandler struct {
-	nextSessionId  int
-	sessions       map[string]any
-	sessionsLock   sync.Mutex
-	sessionFactory SessionFactory
+	nextSessionId        int
+	sessionAndTimestamps map[string]SessionAndTimestamp
+	sessionsLock         sync.Mutex
+	sessionFactory       SessionFactory
+	apiMarshaler         *ApiMarshaler
 }
 
 func (handler *ApiHandler) getSession(sid string) (any, string) {
 	handler.sessionsLock.Lock()
 	defer handler.sessionsLock.Unlock()
 
-	session, ok := handler.sessions[sid]
+	sessionAndTimestamp, ok := handler.sessionAndTimestamps[sid]
 	if !ok {
 		sid = strconv.Itoa(handler.nextSessionId)
 		handler.nextSessionId++
 
-		session = handler.sessionFactory(sid)
-		handler.sessions[sid] = session
+		sessionAndTimestamp = SessionAndTimestamp{
+			Session: handler.sessionFactory(sid),
+		}
+		handler.sessionAndTimestamps[sid] = sessionAndTimestamp
 	}
-	return session, sid
+	sessionAndTimestamp.Timestamp = time.Now()
+	return sessionAndTimestamp.Session, sid
 }
 
 func (handler *ApiHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	_, sid := handler.getSession(request.Header.Get(SessionHeader))
-	writer.Header().Set(SessionHeader, sid)
+	session, sid := handler.getSession(request.Header.Get(SessionHeader))
 
-	body := make(chan []byte)
-	go func() {
-		buffer := make([]byte, 1024)
-		for {
-			n, err := request.Body.Read(buffer)
-			if n > 0 {
-				body <- buffer[:n]
-			}
-			if err != nil {
-				if err != io.EOF {
-					println("err: " + err.Error())
-				}
-				break
-			}
-		}
-		close(body)
-	}()
+	pathSplit := strings.Split(request.URL.Path, "/")
+	function := pathSplit[len(pathSplit)-1]
 
-loop:
-	for {
-		select {
-		case request := <-body:
-			if len(request) == 0 {
-				println("end of body")
-				break loop
-			}
-			println("request: " + string(request))
-		case <-time.After(1 * time.Second):
-			print("ok")
-			writer.Write([]byte("Hello, world!\n"))
-			writer.(http.Flusher).Flush()
+	responseHeaders := writer.Header()
+	responseHeaders.Set(SessionHeader, sid)
+	responseHeaders.Set(ContentTypeHeader, ContentTypeJson)
 
-		case <-request.Context().Done():
-			println("closed by client")
-			break loop
-		}
+	if request.Method == http.MethodHead {
+		responseHeaders.Set(ContentLengthHeader, "0")
+		return
+	}
+
+	if function == "" {
+		handler.apiMarshaler.describe(session, writer)
+	} else {
+		handler.apiMarshaler.call(session, request.Context(), function, request.Body, writer)
 	}
 
 }
 
 func newMessageHandler(options Options) (*ApiHandler, error) {
+
+	apiMarshaler, err := newApiMarshaler(options)
+	if err != nil {
+		return nil, err
+	}
+
 	return &ApiHandler{
-		sessions:       make(map[string]any),
-		sessionFactory: options.SessionFactory,
+		sessionAndTimestamps: make(map[string]SessionAndTimestamp),
+		sessionFactory:       options.SessionFactory,
+		apiMarshaler:         apiMarshaler,
 	}, nil
 }

@@ -40,7 +40,7 @@ func NewHandler(options Options) (http.Handler, error) {
 	mux := http.ServeMux{}
 
 	mux.Handle("/", staticHandler)
-	mux.Handle("/api", apiHandler)
+	mux.Handle("/api/", apiHandler)
 
 	return &mux, nil
 

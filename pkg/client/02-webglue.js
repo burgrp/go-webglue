@@ -66,6 +66,12 @@ let wg = {
 };
 
 function startWebglue() {
+	startWebglueAsync().catch(err => {
+		console.error("Unhandled Webglue error:", err);
+	});
+}
+
+async function startWebglueAsync() {
 
 	console.info("Webglue application starting...");
 
@@ -134,75 +140,130 @@ function startWebglue() {
 		}
 	};
 
-	/**** server connection ****/
+	/**** server API ****/
 
-	const url = `${location.protocol.replace("http", "ws")}//${location.host}`;
+	let sessionId;
 
-	const socket = io.connect(url);
-
-	socket.on("event", (apiName, eventName, args) => {
-		if (wg.logEvents) {
-			console.info("->", (apiName || "(none)") + "." + eventName, args);
-		}
-		$("*").trigger("webglue." + (apiName ? apiName + "." : "") + eventName, args);
-	});
-
-	socket.on("connect", () => {
-
-		socket.emit("discover", "1.0", info => {
-
-			console.info("Server discovery", info);
-
-			for (let apiName in info.api) {
-				wg[apiName] = {};
-				for (let fncName in info.api[apiName]) {
-					wg[apiName][fncName] = async function (...args) {
-						return new Promise((resolveCall, rejectCall) => {
-							socket.emit("call", {
-								api: apiName,
-								fnc: fncName,
-								args
-							}, reply => {
-								if (reply.error) {
-									rejectCall(reply.error);
-								} else {
-									resolveCall(reply.result);
-								}
-							});
-						});
-
-					};
-				}
-			}
-
-			setInterval(() => {
-				$("*").trigger("webglue.Heartbeat");
-			}, 1000);
-
-			if (!info.events["/"]) {
-				info.events["/"] = [];
-			}
-			info.events["/"].push("Heartbeat");
-
-			Object.entries(info.events).forEach(([apiName, events]) => {
-				events.forEach(eventName => {
-					let initcap = s => s.charAt(0).toUpperCase() + s.slice(1);
-					let methodName = "on" + (apiName ? initcap(apiName) : "") + initcap(eventName);
-					let jqName = "webglue." + (apiName ? apiName + "." : "") + eventName;
-					$.fn[methodName] = function (handler) {
-						this.on(jqName, (e, ...args) => {
-							if (e.currentTarget === e.target) {
-								handler.apply(handler, args);
-							}
-						});
-						return this;
-					};
-				});
-			});
-
-			wg.goto(window.location.pathname + window.location.search, true);
+	async function callApi({method, suffix, body}) {
+		let apiResponse = await fetch("/api/" + (suffix || ""), {
+			method,
+			headers: {
+				"Content-Type": "application/json",
+				...sessionId ? {
+					"Webglue-Session": sessionId
+				} : {}
+			},
+			body: JSON.stringify(body),
 		});
+		sessionId = apiResponse.headers.get("Webglue-Session");
+		return method == "HEAD"? undefined: await apiResponse.json();
+	}
 
+	let api = await callApi({
+		method: "GET",
 	});
+
+	wg.api = api.reduce((acc, name) => ({
+		...acc,
+		[name]: async function (...params) {
+			let reply = await callApi({
+				method: "POST",
+				suffix: name,
+				body: params
+			})
+
+			if (reply.error) {
+				throw new Error(reply.error);
+			}
+			return reply.result;
+		}
+	}), {});
+
+	async function pingLoop() {
+		while (true) {
+			try {
+				await callApi({
+					method: "HEAD",
+				});
+			} catch (err) {
+				console.error("Error in ping loop:", err);
+			}
+			await new Promise((resolve, reject) => {setTimeout(resolve, 1000);});
+		}
+	}
+
+	pingLoop().catch(err => {
+		console.error("Unhandled error in ping loop:", err);
+	});
+
+	/**** and the UI ****/
+
+	wg.goto(window.location.pathname + window.location.search, true);
 
 }
+
+
+
+// const url = `${location.protocol.replace("http", "ws")}//${location.host}`;
+
+// const socket = io.connect(url);
+
+// socket.on("event", (apiName, eventName, args) => {
+// 	if (wg.logEvents) {
+// 		console.info("->", (apiName || "(none)") + "." + eventName, args);
+// 	}
+// 	$("*").trigger("webglue." + (apiName ? apiName + "." : "") + eventName, args);
+// });
+
+// socket.on("connect", () => {
+
+// 	socket.emit("discover", "1.0", info => {
+
+// 		console.info("Server discovery", info);
+
+// 		for (let apiName in info.api) {
+// 			wg[apiName] = {};
+// 			for (let fncName in info.api[apiName]) {
+// 				wg[apiName][fncName] = async function (...args) {
+// 					return new Promise((resolveCall, rejectCall) => {
+// 						socket.emit("call", {
+// 							api: apiName,
+// 							fnc: fncName,
+// 							args
+// 						}, reply => {
+// 							if (reply.error) {
+// 								rejectCall(reply.error);
+// 							} else {
+// 								resolveCall(reply.result);
+// 							}
+// 						});
+// 					});
+
+// 				};
+// 			}
+// 		}
+
+// 		setInterval(() => {
+// 			$("*").trigger("webglue.Heartbeat");
+// 		}, 1000);
+
+// 		if (!info.events["/"]) {
+// 			info.events["/"] = [];
+// 		}
+// 		info.events["/"].push("Heartbeat");
+
+// 		Object.entries(info.events).forEach(([apiName, events]) => {
+// 			events.forEach(eventName => {
+// 				let initcap = s => s.charAt(0).toUpperCase() + s.slice(1);
+// 				let methodName = "on" + (apiName ? initcap(apiName) : "") + initcap(eventName);
+// 				let jqName = "webglue." + (apiName ? apiName + "." : "") + eventName;
+// 				$.fn[methodName] = function (handler) {
+// 					this.on(jqName, (e, ...args) => {
+// 						if (e.currentTarget === e.target) {
+// 							handler.apply(handler, args);
+// 						}
+// 					});
+// 					return this;
+// 				};
+// 			});
+// 		});
