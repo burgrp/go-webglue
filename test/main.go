@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	"errors"
 	webglue "go-webglue/pkg"
@@ -23,10 +24,12 @@ func (api *TestApi) Div(a int, b int) (any, any, error) {
 	return a / b, a % b, nil
 }
 
-func (api *TestApi) Greet(in struct{ name string }) []string {
+func (api *TestApi) Greet(ctx context.Context, in struct {
+	Name string `json:"name"`
+}) []string {
 	return []string{
-		"Hello, " + in.name + "!",
-		"Hi, " + in.name + "!",
+		"Hello, " + in.Name + "!",
+		"Hi, " + in.Name + "!",
 	}
 }
 
@@ -42,13 +45,18 @@ func main() {
 		},
 	}
 
-	apiDispatcher, err := webglue.NewApiDispatcher(options)
+	apiMarshaler, err := webglue.NewApiMarshaler(options)
 	if err != nil {
 		panic(err)
 	}
 
-	result := apiDispatcher.Call("test", "div", []byte(`[5, 2]`))
-	print("result: " + string(result))
+	ctx := context.Background()
+
+	result := apiMarshaler.Call(ctx, "test", "div", []byte(`[5, 2]`))
+	println("result: " + string(result))
+
+	result = apiMarshaler.Call(ctx, "test", "greet", []byte(`[{"name": "John"}]`))
+	println("result: " + string(result))
 
 	// handler, err := webglue.NewHandler(options)
 

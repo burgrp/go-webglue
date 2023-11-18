@@ -1,24 +1,25 @@
 package webglue
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"reflect"
 	"strings"
 )
 
-type ApiDispatcher struct {
+type ApiMarshaler struct {
 	modules map[string]interface{}
 }
 
-func NewApiDispatcher(options Options) (*ApiDispatcher, error) {
+func NewApiMarshaler(options Options) (*ApiMarshaler, error) {
 
 	modules := make(map[string]interface{})
 	for _, module := range options.Modules {
 		modules[module.Name] = module.Api
 	}
 
-	return &ApiDispatcher{
+	return &ApiMarshaler{
 		modules: modules,
 	}, nil
 }
@@ -41,7 +42,7 @@ type ResultReply struct {
 	Result interface{} `json:"result"`
 }
 
-func (marshaler *ApiDispatcher) Call(module string, function string, request []byte) []byte {
+func (marshaler *ApiMarshaler) Call(ctx context.Context, module string, function string, request []byte) []byte {
 
 	mod, ok := marshaler.modules[module]
 	if !ok {
@@ -63,30 +64,49 @@ func (marshaler *ApiDispatcher) Call(module string, function string, request []b
 		return MarshalError(errors.New("function must have receiver"))
 	}
 
-	numParams := fncType.NumIn() - 1
+	numIn := fncType.NumIn()
+	allParams := make([]reflect.Value, numIn)
+	unmParams := make([]interface{}, numIn)
+	unmToAllMap := make(map[int]int, numIn)
+	unmParamsLen := 0
 
-	params := make([]interface{}, numParams)
-	for i := 0; i < numParams; i++ {
-		paramType := fncType.In(i + 1)
+	for i := 0; i < len(allParams); i++ {
+
+		paramType := fncType.In(i)
+
+		if reflect.TypeOf(ctx).AssignableTo(paramType) {
+			allParams[i] = reflect.ValueOf(ctx)
+			continue
+		}
+
+		if reflect.TypeOf(mod).AssignableTo(paramType) {
+			allParams[i] = reflect.ValueOf(mod)
+			continue
+		}
+
 		param := reflect.New(paramType)
-		params[i] = param.Interface()
+		unmParams[unmParamsLen] = param.Interface()
+		unmToAllMap[unmParamsLen] = i
+		unmParamsLen++
 	}
+	unmParams = unmParams[:unmParamsLen]
 
-	err := json.Unmarshal(request, &params)
+	beforeUnmarshal := len(unmParams)
+
+	err := json.Unmarshal(request, &unmParams)
 	if err != nil {
 		return MarshalError(err)
 	}
 
-	if len(params) != numParams {
+	if len(unmParams) != beforeUnmarshal {
 		return MarshalError(errors.New("wrong number of parameters"))
 	}
 
-	rcvAndArgValues := []reflect.Value{reflect.ValueOf(mod)}
-	for _, param := range params {
-		rcvAndArgValues = append(rcvAndArgValues, reflect.ValueOf(param).Elem())
+	for i := 0; i < len(unmParams); i++ {
+		allParams[unmToAllMap[i]] = reflect.ValueOf(unmParams[i]).Elem()
 	}
 
-	allResults := fncValue.Func.Call(rcvAndArgValues)
+	allResults := fncValue.Func.Call(allParams)
 
 	results := make([]interface{}, 0)
 	for _, result := range allResults {

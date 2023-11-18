@@ -86,11 +86,7 @@ func newStaticHandler(options Options) (*StaticHandler, error) {
 
 	for _, module := range allModules {
 
-		println("module", module.Name)
-
 		devPath := os.Getenv(strings.ToUpper(module.Name) + "_DEV")
-
-		println("devPath", devPath)
 
 		root := ""
 		fs.WalkDir(module.Resources, ".", func(filePath string, entry fs.DirEntry, err error) error {

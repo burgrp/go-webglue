@@ -20,7 +20,7 @@ type Options struct {
 
 func NewHandler(options Options) (http.Handler, error) {
 
-	// apiDispatcher, err := newApiDispatcher(options)
+	// apiMarshaler, err := newApiMarshaler(options)
 	// if err != nil {
 	// 	return nil, err
 	// }
