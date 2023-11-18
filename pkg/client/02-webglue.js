@@ -143,6 +143,7 @@ async function startWebglueAsync() {
 	/**** server API ****/
 
 	let sessionId;
+	let pingIntervalSec;
 
 	async function callApi({method, suffix, body}) {
 		let apiResponse = await fetch("/api/" + (suffix || ""), {
@@ -156,6 +157,7 @@ async function startWebglueAsync() {
 			body: JSON.stringify(body),
 		});
 		sessionId = apiResponse.headers.get("Webglue-Session");
+		pingIntervalSec = Number.parseInt(apiResponse.headers.get("Webglue-Ping"));
 		return method == "HEAD"? undefined: await apiResponse.json();
 	}
 
@@ -188,7 +190,7 @@ async function startWebglueAsync() {
 			} catch (err) {
 				console.error("Error in ping loop:", err);
 			}
-			await new Promise((resolve, reject) => {setTimeout(resolve, 1000);});
+			await new Promise((resolve, reject) => {setTimeout(resolve, pingIntervalSec * 1000);});
 		}
 	}
 

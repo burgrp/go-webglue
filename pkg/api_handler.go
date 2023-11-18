@@ -1,6 +1,7 @@
 package webglue
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -10,9 +11,13 @@ import (
 
 const (
 	SessionHeader       = "Webglue-Session"
+	PingHeader          = "Webglue-Ping"
 	ContentTypeHeader   = "Content-Type"
 	ContentTypeJson     = "application/json"
 	ContentLengthHeader = "Content-Length"
+
+	SessionExpiration = 1 * time.Minute
+	SessionPing       = 10 * time.Second
 )
 
 type SessionAndTimestamp struct {
@@ -22,7 +27,7 @@ type SessionAndTimestamp struct {
 
 type ApiHandler struct {
 	nextSessionId        int
-	sessionAndTimestamps map[string]SessionAndTimestamp
+	sessionAndTimestamps map[string]*SessionAndTimestamp
 	sessionsLock         sync.Mutex
 	sessionFactory       SessionFactory
 	apiMarshaler         *ApiMarshaler
@@ -37,7 +42,7 @@ func (handler *ApiHandler) getSession(sid string) (any, string) {
 		sid = strconv.Itoa(handler.nextSessionId)
 		handler.nextSessionId++
 
-		sessionAndTimestamp = SessionAndTimestamp{
+		sessionAndTimestamp = &SessionAndTimestamp{
 			Session: handler.sessionFactory(sid),
 		}
 		handler.sessionAndTimestamps[sid] = sessionAndTimestamp
@@ -54,6 +59,7 @@ func (handler *ApiHandler) ServeHTTP(writer http.ResponseWriter, request *http.R
 
 	responseHeaders := writer.Header()
 	responseHeaders.Set(SessionHeader, sid)
+	responseHeaders.Set(PingHeader, strconv.Itoa(int(SessionPing.Seconds())))
 	responseHeaders.Set(ContentTypeHeader, ContentTypeJson)
 
 	if request.Method == http.MethodHead {
@@ -69,16 +75,36 @@ func (handler *ApiHandler) ServeHTTP(writer http.ResponseWriter, request *http.R
 
 }
 
-func newMessageHandler(options Options) (*ApiHandler, error) {
+func newMessageHandler(ctx context.Context, options Options) (*ApiHandler, error) {
 
 	apiMarshaler, err := newApiMarshaler(options)
 	if err != nil {
 		return nil, err
 	}
 
-	return &ApiHandler{
-		sessionAndTimestamps: make(map[string]SessionAndTimestamp),
+	apiHandler := &ApiHandler{
+		sessionAndTimestamps: make(map[string]*SessionAndTimestamp),
 		sessionFactory:       options.SessionFactory,
 		apiMarshaler:         apiMarshaler,
-	}, nil
+	}
+
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-time.After(1 * time.Second):
+				apiHandler.sessionsLock.Lock()
+				oldest := time.Now().Add(-SessionExpiration)
+				for sid, sessionAndTimestamp := range apiHandler.sessionAndTimestamps {
+					if sessionAndTimestamp.Timestamp.Before(oldest) {
+						delete(apiHandler.sessionAndTimestamps, sid)
+					}
+				}
+				apiHandler.sessionsLock.Unlock()
+			}
+		}
+	}()
+
+	return apiHandler, nil
 }

@@ -1,6 +1,7 @@
 package webglue
 
 import (
+	"context"
 	"embed"
 	"errors"
 	"io/fs"
@@ -65,7 +66,7 @@ func (handler *StaticHandler) ServeHTTP(writer http.ResponseWriter, request *htt
 	writer.Write([]byte(handler.indexHtml))
 }
 
-func newStaticHandler(options Options) (*StaticHandler, error) {
+func newStaticHandler(ctx context.Context, options Options) (*StaticHandler, error) {
 	allModules := append([]Module{
 		{
 			Name:      "webglue",
