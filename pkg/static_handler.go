@@ -33,17 +33,7 @@ const (
 	`
 )
 
-type Module struct {
-	Name      string
-	Resources embed.FS
-}
-
-type Options struct {
-	Modules   []Module
-	IndexHtml string
-}
-
-type RootHandler struct {
+type StaticHandler struct {
 	indexHtml   string
 	cachedFiles map[string][]byte
 	devFiles    map[string]string
@@ -52,31 +42,30 @@ type RootHandler struct {
 //go:embed client
 var clientResources embed.FS
 
-func (handler RootHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+func (handler *StaticHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
-	webPath := r.URL.Path
+	webPath := request.URL.Path
 
 	filePath, ok := handler.devFiles[webPath]
 	if ok {
-		http.ServeFile(w, r, filePath)
+		http.ServeFile(writer, request, filePath)
 		return
 	}
 
-	header := w.Header()
+	header := writer.Header()
 
 	data, ok := handler.cachedFiles[webPath]
 	if ok {
 		header.Set("Content-Type", mime.TypeByExtension(filepath.Ext(webPath)))
-		w.Write(data)
+		writer.Write(data)
 		return
 	}
 
 	header.Set("Content-Type", "text/html; charset=utf-8")
-	w.Write([]byte(handler.indexHtml))
+	writer.Write([]byte(handler.indexHtml))
 }
 
-func NewHandler(options Options) (http.Handler, error) {
-
+func newStaticHandler(options Options) (*StaticHandler, error) {
 	allModules := append([]Module{
 		{
 			Name:      "webglue",
@@ -166,22 +155,10 @@ func NewHandler(options Options) (http.Handler, error) {
 	indexHtml = strings.ReplaceAll(indexHtml, PlaceholderCss, refStrCss)
 	indexHtml = strings.ReplaceAll(indexHtml, PlaceholderJs, refStrJs)
 
-	rootHandler := RootHandler{
+	return &StaticHandler{
 		indexHtml:   indexHtml,
 		cachedFiles: cachedFiles,
 		devFiles:    devFiles,
-	}
-
-	webSocketHandler, err := newWebSocketHandler()
-	if err != nil {
-		return nil, err
-	}
-
-	mux := http.ServeMux{}
-
-	mux.Handle("/", rootHandler)
-	mux.Handle("/socket.io/", webSocketHandler)
-
-	return &mux, nil
+	}, nil
 
 }
