@@ -10,12 +10,14 @@ type ApiFunction func(request []byte) ([]byte, error)
 type Module struct {
 	Name      string
 	Resources embed.FS
-	Api       interface{}
 }
 
+type SessionFactory func(id string) any
+
 type Options struct {
-	Modules   []Module
-	IndexHtml string
+	Modules        []Module
+	IndexHtml      string
+	SessionFactory SessionFactory
 }
 
 func NewHandler(options Options) (http.Handler, error) {
@@ -30,7 +32,7 @@ func NewHandler(options Options) (http.Handler, error) {
 		return nil, err
 	}
 
-	messageHandler, err := newMessageHandler(options)
+	apiHandler, err := newMessageHandler(options)
 	if err != nil {
 		return nil, err
 	}
@@ -38,7 +40,7 @@ func NewHandler(options Options) (http.Handler, error) {
 	mux := http.ServeMux{}
 
 	mux.Handle("/", staticHandler)
-	mux.Handle("/msg", messageHandler)
+	mux.Handle("/api", apiHandler)
 
 	return &mux, nil
 

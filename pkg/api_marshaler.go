@@ -9,19 +9,10 @@ import (
 )
 
 type ApiMarshaler struct {
-	modules map[string]interface{}
 }
 
 func NewApiMarshaler(options Options) (*ApiMarshaler, error) {
-
-	modules := make(map[string]interface{})
-	for _, module := range options.Modules {
-		modules[module.Name] = module.Api
-	}
-
-	return &ApiMarshaler{
-		modules: modules,
-	}, nil
+	return &ApiMarshaler{}, nil
 }
 
 type ErrorReply struct {
@@ -39,19 +30,14 @@ func MarshalError(err error) []byte {
 }
 
 type ResultReply struct {
-	Result interface{} `json:"result"`
+	Result any `json:"result"`
 }
 
-func (marshaler *ApiMarshaler) Call(ctx context.Context, module string, function string, request []byte) []byte {
-
-	mod, ok := marshaler.modules[module]
-	if !ok {
-		return MarshalError(errors.New("module not found"))
-	}
+func (marshaler *ApiMarshaler) Call(receiver any, ctx context.Context, function string, request []byte) []byte {
 
 	fncGoName := strings.ToUpper(function[0:1]) + function[1:]
 
-	modPtrType := (reflect.TypeOf(mod))
+	modPtrType := (reflect.TypeOf(receiver))
 
 	fncValue, ok := modPtrType.MethodByName(fncGoName)
 	if !ok {
@@ -66,7 +52,7 @@ func (marshaler *ApiMarshaler) Call(ctx context.Context, module string, function
 
 	numIn := fncType.NumIn()
 	allParams := make([]reflect.Value, numIn)
-	unmParams := make([]interface{}, numIn)
+	unmParams := make([]any, numIn)
 	unmToAllMap := make(map[int]int, numIn)
 	unmParamsLen := 0
 
@@ -79,8 +65,8 @@ func (marshaler *ApiMarshaler) Call(ctx context.Context, module string, function
 			continue
 		}
 
-		if reflect.TypeOf(mod).AssignableTo(paramType) {
-			allParams[i] = reflect.ValueOf(mod)
+		if reflect.TypeOf(receiver).AssignableTo(paramType) {
+			allParams[i] = reflect.ValueOf(receiver)
 			continue
 		}
 
@@ -108,7 +94,7 @@ func (marshaler *ApiMarshaler) Call(ctx context.Context, module string, function
 
 	allResults := fncValue.Func.Call(allParams)
 
-	results := make([]interface{}, 0)
+	results := make([]any, 0)
 	for _, result := range allResults {
 		if result.Type().AssignableTo(reflect.TypeOf((*error)(nil)).Elem()) {
 			if !result.IsNil() {
