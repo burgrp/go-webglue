@@ -62,7 +62,6 @@ func main() {
 	}
 
 	handler, err := webglue.NewHandler(options)
-
 	if err != nil {
 		panic(err)
 	}
