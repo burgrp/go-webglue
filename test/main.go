@@ -16,10 +16,6 @@ type TestSession struct {
 	Counter int
 }
 
-func (session *TestSession) Add(a struct{ V int }, b int) any {
-	return a.V + b
-}
-
 func (session *TestSession) Div(a int, b int) (any, any, error) {
 	if b == 0 {
 		return 0, 0, errors.New("division by zero")
@@ -28,11 +24,12 @@ func (session *TestSession) Div(a int, b int) (any, any, error) {
 }
 
 func (session *TestSession) Greet(ctx context.Context, in struct {
-	Name string `json:"name"`
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
 }) []string {
 	return []string{
-		"Hello, " + in.Name + "!",
-		"Hi, " + in.Name + "!",
+		"Hello, " + in.FirstName + " " + in.LastName + "!",
+		"Hi, " + in.FirstName + " " + in.LastName + "!",
 	}
 }
 

@@ -93,10 +93,12 @@ func (marshaler *ApiMarshaler) call(receiver any, ctx context.Context, function 
 
 	beforeUnmarshal := len(unmParams)
 
-	err := json.NewDecoder(reader).Decode(&unmParams)
-	if err != nil {
-		MarshalError(err, writer)
-		return
+	if beforeUnmarshal > 0 {
+		err := json.NewDecoder(reader).Decode(&unmParams)
+		if err != nil {
+			MarshalError(err, writer)
+			return
+		}
 	}
 
 	if len(unmParams) != beforeUnmarshal {
@@ -105,7 +107,15 @@ func (marshaler *ApiMarshaler) call(receiver any, ctx context.Context, function 
 	}
 
 	for i := 0; i < len(unmParams); i++ {
-		allParams[unmToAllMap[i]] = reflect.ValueOf(unmParams[i]).Elem()
+		paramValue := reflect.ValueOf(unmParams[i])
+		paramKind := paramValue.Kind()
+		if paramKind == reflect.Ptr || paramKind == reflect.Interface {
+			paramValue = paramValue.Elem()
+		} else {
+			MarshalError(errors.New("can not unmarshal parameter"), writer)
+			return
+		}
+		allParams[unmToAllMap[i]] = paramValue
 	}
 
 	allResults := fncValue.Func.Call(allParams)
@@ -132,7 +142,7 @@ func (marshaler *ApiMarshaler) call(receiver any, ctx context.Context, function 
 		resultReply.Result = results
 	}
 
-	err = json.NewEncoder(writer).Encode(resultReply)
+	err := json.NewEncoder(writer).Encode(resultReply)
 	if err != nil {
 		MarshalError(err, writer)
 		return

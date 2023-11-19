@@ -10,6 +10,18 @@ let wg = {
 		}
 	},
 
+ showError(error) {
+		console.error(error)
+		alert(error)
+	},
+
+	doAsync(action) {
+		async function wrap() {
+			await action()
+		}
+		wrap().catch(e => wg.showError(e))
+	},
+
 	async goto(page, current) {
 
 		if (current) {
@@ -84,7 +96,9 @@ async function startWebglueAsync() {
 				if (arg instanceof Array) {
 					el.append(arg);
 				} else if (arg instanceof Function) {
-					arg(el);
+					wg.doAsync(async () => {
+						await arg(el);
+					})
 				} else if (arg instanceof Object) {
 					el.attr(arg);
 				} else if (typeof arg === "string") {
@@ -142,10 +156,10 @@ async function startWebglueAsync() {
 
 	/**** server API ****/
 
-	let sessionId;
 	let pingIntervalSec;
 
 	async function callApi({method, suffix, body}) {
+		let sessionId = localStorage.getItem("Webglue-Session");
 		let apiResponse = await fetch("/api/" + (suffix || ""), {
 			method,
 			headers: {
@@ -157,6 +171,7 @@ async function startWebglueAsync() {
 			body: JSON.stringify(body),
 		});
 		sessionId = apiResponse.headers.get("Webglue-Session");
+		localStorage.setItem("Webglue-Session", sessionId);
 		pingIntervalSec = Number.parseInt(apiResponse.headers.get("Webglue-Ping"));
 		return method == "HEAD"? undefined: await apiResponse.json();
 	}

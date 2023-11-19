@@ -1,4 +1,91 @@
-html {
-    background-color: rgb(7 93 116);
-    color: #d2d2d2;
+body {
+    background-color: rgb(65 65 65);
+    color: #2a2a2a;
+    font-size: 14pt;
+    font-family: sans-serif;
+    padding: 1em;
+}
+
+div.test {
+    background-color: #d0d0d0;
+    padding: 1em;
+    border-radius: 0.4em;
+    border: #ad2b2f 3px solid;
+    box-shadow: black 0px 0px 10px;
+    margin-bottom: 2em;
+}
+
+div.label {
+    border-bottom: black 1px dotted;
+    margin-bottom: 0.7em;
+}
+
+div.line {
+    display: flex;
+    align-items: center;
+}
+
+div.line>* {
+    margin-right: 0.2em;
+}
+
+div.line div.end {
+    flex-grow: 1;
+    display: flex;
+    justify-content: flex-end;
+}
+
+input {
+    font-size: unset;
+}
+
+button {
+    font-size: unset;
+    border: none;
+    background-color: #ad2b2f;
+    border-radius: 0.4em;
+    padding: .2em 0.5em;
+    min-width: 5em;
+    color: white;    
+    align-self: flex-end;
+    text-shadow: 0px 0px 1em #000000;
+    box-shadow: black 0px 0px 3px;
+}
+
+div.notes {
+    margin-top: 1em;
+    font-size: smaller;
+    color: #1f1f1f
+}
+
+div.errors {
+    position: absolute;
+    background-color: #ad2b2f;
+    padding: 2em;
+    top: -10px;
+    left: 10%;
+    right: 10%;
+    color: white;
+    font-weight: bold;
+    text-shadow: 0px 0px 1em #000000;
+    border: 1px solid white;
+    box-shadow: black 0px 0px 10px;
+    border-radius: 10px;
+}
+
+div.errors:empty {
+    display: none;
+}
+
+div.test.div input {
+    width: 3em;
+}
+
+div.test.greetings input {
+    width: 6em;
+}
+
+div.test.greetings div.greetings>* {
+    margin-top: 0.5em;
+    font-family: mono
 }
