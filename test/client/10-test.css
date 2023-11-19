@@ -3,7 +3,7 @@ body {
     color: #2a2a2a;
     font-size: 14pt;
     font-family: sans-serif;
-    padding: 1em;
+    padding: 1em 1em;
 }
 
 div.test {
@@ -23,6 +23,7 @@ div.label {
 div.line {
     display: flex;
     align-items: center;
+    flex-wrap: wrap
 }
 
 div.line>* {
@@ -46,7 +47,7 @@ button {
     border-radius: 0.4em;
     padding: .2em 0.5em;
     min-width: 5em;
-    color: white;    
+    color: white;
     align-self: flex-end;
     text-shadow: 0px 0px 1em #000000;
     box-shadow: black 0px 0px 3px;
@@ -88,4 +89,11 @@ div.test.greetings input {
 div.test.greetings div.greetings>* {
     margin-top: 0.5em;
     font-family: mono
+}
+
+@media screen and (min-width: 600px) {
+    body {
+        padding-left: 10%;
+        padding-right: 10%;
+    }
 }
