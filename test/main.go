@@ -65,7 +65,9 @@ func main() {
 
 	server := http.NewServeMux()
 	server.Handle("/", handler)
-	err = http.ListenAndServe(":8080", server)
+	port := "8080"
+	println("Listening on port " + port)
+	err = http.ListenAndServe(":"+port, server)
 	if err != nil {
 		panic(err)
 	}

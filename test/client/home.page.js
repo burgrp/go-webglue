@@ -1,4 +1,4 @@
-import wg from "webglue";
+import {api, asy} from "webglue";
 
 export default {
     title: "WebGlue test",
@@ -6,11 +6,11 @@ export default {
 
         let divA, divB, divResult, divFirstName, divLastName, divGreetings, divCounter, divErrors;
 
-        wg.showError = function (e) {
-            divErrors.append(DIV(d => {
-                setTimeout(() => d.fadeOut(() => d.remove()), 2000);
-            }).text(e.toString()));
-        }
+        // showError = function (e) {
+        //     divErrors.append(DIV(d => {
+        //         setTimeout(() => d.fadeOut(() => d.remove()), 2000);
+        //     }).text(e.toString()));
+        // }
 
         container.append(
             DIV("errors", d => divErrors = d),
@@ -24,8 +24,8 @@ export default {
                     DIV(d => divResult = d),
                     DIV("end", [
                         BUTTON().text("test").click(() => {
-                            wg.doAsync(async () => {
-                                let [result, reminder] = await wg.api.div(
+                            asy(async () => {
+                                let [result, reminder] = await api.div(
                                     Number.parseInt(divA.val()),
                                     Number.parseInt(divB.val())
                                 );
@@ -45,8 +45,8 @@ export default {
                     INPUT(d => divLastName = d).val("Beeblebrox"),
                     DIV("end", [
                         BUTTON().text("test").click(() => {
-                            wg.doAsync(async () => {
-                                let greetings = await wg.api.greet({
+                            asy(async () => {
+                                let greetings = await api.greet({
                                     firstName: divFirstName.val(),
                                     lastName: divLastName.val()
                                 });
@@ -62,7 +62,7 @@ export default {
                 DIV("label").text("Session ID"),
                 DIV("line", [
                     DIV(async d => {
-                        d.text(await wg.api.getId());
+                        d.text(await api.getId());
                     }),
                 ]),
                 DIV("notes").text("The getId function returns the session ID. The session ID is stored in the browser's local storage, so it is preserved even if you refresh the page.")
@@ -73,14 +73,14 @@ export default {
                     DIV().text("counter:"),
                     DIV(d => {
                         divCounter = d;
-                        wg.doAsync(async () => {
-                            divCounter.text(await wg.api.inc(0));
+                        asy(async () => {
+                            divCounter.text(await api.inc(0));
                         })
                     }),
                     DIV("end", [
                         BUTTON().text("test").click(() => {
-                            wg.doAsync(async () => {
-                                divCounter.text(await wg.api.inc(1));
+                            asy(async () => {
+                                divCounter.text(await api.inc(1));
                             })
                         })
                     ])

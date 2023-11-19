@@ -25,9 +25,8 @@ const (
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 {WEBGLUE}
 		<script type="module">
-			import { startWebglue } from "webglue";
-			import "jquery";
-			$(document).ready(startWebglue);
+			import {start} from "webglue";
+			$(document).ready(start);
 		</script>
 	</head>
 	<body>

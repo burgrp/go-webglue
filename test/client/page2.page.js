@@ -1,4 +1,4 @@
-wg.pages.page2 = {
+export default {
     title: "WebGlue page2",
     async render(container, page, params) {
 

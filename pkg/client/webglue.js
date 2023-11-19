@@ -2,94 +2,99 @@
 
 import "jquery";
 
-let wg = {
+let api = {};
 
-	showError(error) {
-		console.error(error)
-		alert(error)
-	},
+let showError = function(error) {
+	console.error(error)
+	alert(error)
+}
 
-	doAsync(action) {
-		async function wrap() {
-			await action()
-		}
-		wrap().catch(e => wg.showError(e))
-	},
+function setShowError(fnc) {
+	showError = fnc;
+}
 
-	async goto(page, current) {
+function asy(action) {
+	async function wrap() {
+		await action()
+	}
+	wrap().catch(e => showError(e))
+}
 
-		if (current) {
-			history.replaceState(page, page, page);
-		} else {
-			history.pushState(page, page, page);
-		}
+let page;
 
-		let params = {};
+async function goto(url, current) {
 
-		if (page.startsWith("/")) {
-			page = page.slice(1);
-		}
+	if (current) {
+		history.replaceState(url, url, url);
+	} else {
+		history.pushState(url, url, url);
+	}
 
-		if (!page || page === "") {
-			page = "home";
-		}
+	let params = {};
 
-		let qmPos = page.indexOf("?");
-		if (qmPos !== -1) {
-			let vars = page.slice(qmPos + 1).split('&');
-			vars.forEach(avar => {
-				let pair = avar.split('=');
-				if (pair.length === 2) {
-					params[pair[0]] = decodeURIComponent(pair[1]);
-				}
-			});
-			page = page.slice(0, qmPos);
-		}
+	if (url.startsWith("/")) {
+		url = url.slice(1);
+	}
 
-		if (!page || page === "") {
-			page = "home";
-		}
+	if (!url || url === "") {
+		url = "home";
+	}
 
-		let root = $("body");
-		root.empty();
-
-
-		let p;
-		try {
-			p = (await import("./" + page + ".page.js")).default;
-		} catch (e) {
-			p = {
-				title: "Not found",
-				render(root, page) {
-					root.append(DIV("error").text(`Page '${page}' not found.`));
-				}
+	let qmPos = url.indexOf("?");
+	if (qmPos !== -1) {
+		let vars = url.slice(qmPos + 1).split('&');
+		vars.forEach(avar => {
+			let pair = avar.split('=');
+			if (pair.length === 2) {
+				params[pair[0]] = decodeURIComponent(pair[1]);
 			}
-		}
+		});
+		url = url.slice(0, qmPos);
+	}
 
-		let render = true;
-		if (p.check) {
-			let redirection = await p.check(page, params);
-			if (redirection) {
-				render = false;
-				await this.goto(redirection, page);
+	if (!url || url === "") {
+		url = "home";
+	}
+
+	let root = $("body");
+	root.empty();
+
+	try {
+		page = (await import("./" + url + ".page.js")).default;
+	} catch (e) {
+		console.error(e);
+		page = {
+			title: "Not found",
+			render(root, page) {
+				root.append(DIV("error").text(`Page '${page}' not found.`));
 			}
-		}
-
-		if (render) {
-			console.info("Rendering", page, params);
-			document.title = p.title || page;
-			await p.render(root, page, params);
 		}
 	}
-};
 
-export function startWebglue() {
-	startWebglueAsync().catch(err => {
+	let render = true;
+	if (page.check) {
+		let redirection = await page.check(url, params);
+		if (redirection) {
+			render = false;
+			await this.goto(redirection, url);
+		}
+	}
+
+	if (render) {
+		console.info("Rendering", url, params);
+		document.title = page.title || url;
+		await page.render(root, url, params);
+	}
+}
+
+
+function start() {
+	startAsync().catch(err => {
 		console.error("Unhandled Webglue error:", err);
 	});
 }
 
-async function startWebglueAsync() {
+async function startAsync() {
 
 	console.info("Webglue application starting...");
 
@@ -102,7 +107,7 @@ async function startWebglueAsync() {
 				if (arg instanceof Array) {
 					el.append(arg);
 				} else if (arg instanceof Function) {
-					wg.doAsync(async () => {
+					asy(async () => {
 						await arg(el);
 					})
 				} else if (arg instanceof Object) {
@@ -150,13 +155,13 @@ async function startWebglueAsync() {
 		) {
 			e.preventDefault();
 			let page = $(e.currentTarget).attr("href");
-			wg.goto(page);
+			goto(page);
 		}
 	});
 
 	window.onpopstate = e => {
 		if (e.state) {
-			wg.goto(e.state, true);
+			goto(e.state, true);
 		}
 	};
 
@@ -182,11 +187,11 @@ async function startWebglueAsync() {
 		return method == "HEAD" ? undefined : await apiResponse.json();
 	}
 
-	let api = await callApi({
+	let names = await callApi({
 		method: "GET",
 	});
 
-	wg.api = api.reduce((acc, name) => ({
+	api = names.reduce((acc, name) => ({
 		...acc,
 		[name]: async function (...params) {
 			let reply = await callApi({
@@ -200,7 +205,7 @@ async function startWebglueAsync() {
 			}
 			return reply.result;
 		}
-	}), {});
+	}), api);
 
 	async function pingLoop() {
 		while (true) {
@@ -221,11 +226,17 @@ async function startWebglueAsync() {
 
 	/**** and the UI ****/
 
-	wg.goto(window.location.pathname + window.location.search, true);
+	goto(window.location.pathname + window.location.search, true);
 
 }
 
-export default wg;
+export {
+	start,
+	api,
+	asy,
+	setShowError,
+	goto
+};
 
 // const url = `${location.protocol.replace("http", "ws")}//${location.host}`;
 
