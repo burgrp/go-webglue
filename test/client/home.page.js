@@ -1,4 +1,6 @@
-wg.pages.home = {
+import wg from "webglue";
+
+export default {
     title: "WebGlue test",
     async render(container, page, params) {
 

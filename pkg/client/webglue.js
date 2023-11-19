@@ -1,16 +1,10 @@
 /* global Function, DIV, io */
 
-let wg = {
-	pages: {
-		DEFAULT: {
-			title: "Not found",
-			render(root, page) {
-				root.append(DIV("error").text(`Page '${page}' not found.`));
-			}
-		}
-	},
+import "jquery";
 
- showError(error) {
+let wg = {
+
+	showError(error) {
 		console.error(error)
 		alert(error)
 	},
@@ -58,7 +52,19 @@ let wg = {
 
 		let root = $("body");
 		root.empty();
-		let p = this.pages[page] || this.pages.DEFAULT;
+
+
+		let p;
+		try {
+			p = (await import("./" + page + ".page.js")).default;
+		} catch (e) {
+			p = {
+				title: "Not found",
+				render(root, page) {
+					root.append(DIV("error").text(`Page '${page}' not found.`));
+				}
+			}
+		}
 
 		let render = true;
 		if (p.check) {
@@ -77,7 +83,7 @@ let wg = {
 	}
 };
 
-function startWebglue() {
+export function startWebglue() {
 	startWebglueAsync().catch(err => {
 		console.error("Unhandled Webglue error:", err);
 	});
@@ -158,7 +164,7 @@ async function startWebglueAsync() {
 
 	let pingIntervalSec;
 
-	async function callApi({method, suffix, body}) {
+	async function callApi({ method, suffix, body }) {
 		let sessionId = localStorage.getItem("Webglue-Session");
 		let apiResponse = await fetch("/api/" + (suffix || ""), {
 			method,
@@ -173,7 +179,7 @@ async function startWebglueAsync() {
 		sessionId = apiResponse.headers.get("Webglue-Session");
 		localStorage.setItem("Webglue-Session", sessionId);
 		pingIntervalSec = Number.parseInt(apiResponse.headers.get("Webglue-Ping"));
-		return method == "HEAD"? undefined: await apiResponse.json();
+		return method == "HEAD" ? undefined : await apiResponse.json();
 	}
 
 	let api = await callApi({
@@ -205,7 +211,7 @@ async function startWebglueAsync() {
 			} catch (err) {
 				console.error("Error in ping loop:", err);
 			}
-			await new Promise((resolve, reject) => {setTimeout(resolve, pingIntervalSec * 1000);});
+			await new Promise((resolve, reject) => { setTimeout(resolve, pingIntervalSec * 1000); });
 		}
 	}
 
@@ -219,7 +225,7 @@ async function startWebglueAsync() {
 
 }
 
-
+export default wg;
 
 // const url = `${location.protocol.replace("http", "ws")}//${location.host}`;
 

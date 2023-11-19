@@ -14,9 +14,8 @@ import (
 )
 
 const (
-	PlaceholderCss   = "{WEBGLUE_CSS}"
-	PlaceholderJs    = "{WEBGLUE_JS}"
-	DefaultIndexHtml = `
+	WebgluePlaceholder = "{WEBGLUE}"
+	DefaultIndexHtml   = `
 <!DOCTYPE html>
 <html>
 	<head>
@@ -24,8 +23,11 @@ const (
 		<link rel="shortcut icon" href="/favicon.png?v1">
 		<meta charset="UTF-8">
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-{WEBGLUE_CSS}{WEBGLUE_JS}		<script>
-		$(document).ready(startWebglue);
+{WEBGLUE}
+		<script type="module">
+			import { startWebglue } from "webglue";
+			import "jquery";
+			$(document).ready(startWebglue);
 		</script>
 	</head>
 	<body>
@@ -139,18 +141,24 @@ func newStaticHandler(ctx context.Context, options Options) (*StaticHandler, err
 	sort.Strings(refsCss)
 	sort.Strings(refsJs)
 
-	refStrCss := ""
+	genCode := ""
 	for _, cssFile := range refsCss {
-		refStrCss += "\t\t<link rel=\"stylesheet\" href=\"" + cssFile + "\">\n"
+		genCode += "\t\t<link rel=\"stylesheet\" href=\"" + cssFile + "\">\n"
 	}
 
-	refStrJs := ""
-	for _, jsFile := range refsJs {
-		refStrJs += "\t\t<script type=\"application/javascript\" src=\"" + jsFile + "\"></script>\n"
+	genCode += "\t\t<script type=\"importmap\">\n\t\t\t{\n\t\t\t\t\"imports\": {\n"
+
+	for i, jsFile := range refsJs {
+		genCode += "\t\t\t\t\t\"" + jsFile[:len(jsFile)-3] + "\": \"./" + jsFile + "\""
+		if i < len(refsJs)-1 {
+			genCode += ","
+		}
+		genCode += "\n"
 	}
 
-	indexHtml = strings.ReplaceAll(indexHtml, PlaceholderCss, refStrCss)
-	indexHtml = strings.ReplaceAll(indexHtml, PlaceholderJs, refStrJs)
+	genCode += "\t\t\t\t}\n\t\t\t}\n\t\t</script>"
+
+	indexHtml = strings.ReplaceAll(indexHtml, WebgluePlaceholder, genCode)
 
 	return &StaticHandler{
 		indexHtml:   indexHtml,
