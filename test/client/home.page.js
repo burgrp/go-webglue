@@ -1,25 +1,26 @@
-import {api, asy} from "webglue";
+import { api, asy } from "webglue";
+
+let divErrors;
 
 export default {
     title: "WebGlue test",
+    error(e) {
+        divErrors.append(DIV(d => {
+            setTimeout(() => d.fadeOut(() => d.remove()), 2000);
+        }).text(e.toString()));
+    },
     async render(container, page, params) {
 
-        let divA, divB, divResult, divFirstName, divLastName, divGreetings, divCounter, divErrors;
-
-        // showError = function (e) {
-        //     divErrors.append(DIV(d => {
-        //         setTimeout(() => d.fadeOut(() => d.remove()), 2000);
-        //     }).text(e.toString()));
-        // }
+        let divA, divB, divResult, divFirstName, divLastName, divGreetings, divCounter;
 
         container.append(
             DIV("errors", d => divErrors = d),
             DIV("test div", [
                 DIV("label").text("Error handling test"),
                 DIV("line", [
-                    INPUT(d => divA = d).val(10),
+                    NUMBER(d => divA = d).val(10),
                     DIV().text("/"),
-                    INPUT(d => divB = d).val(0),
+                    NUMBER(d => divB = d).val(0),
                     DIV().text("="),
                     DIV(d => divResult = d),
                     DIV("end", [
@@ -90,10 +91,10 @@ export default {
             DIV("test div", [
                 DIV("label").text("Page navigation"),
                 DIV("line", [
-                    AHREF({href: "/page2"}).text("Go to page 2"),
+                    AHREF({ href: "/page2" }).text("Go to page 2"),
                 ]),
                 DIV("notes").text("This shows page navigation support. The link above takes you to another page. Note the page is not actually reloaded, it is just re-rendered.")
             ])
-       )
+        )
     }
 }

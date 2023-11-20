@@ -4,23 +4,23 @@ import "jquery";
 
 let api = {};
 
-let showError = function(error) {
-	console.error(error)
-	alert(error)
-}
+let page;
 
-function setShowError(fnc) {
-	showError = fnc;
+function error(e) {
+	console.error(e);
+	if (page?.error) {
+		page.error(e);
+	} else {
+		alert(e);
+	}
 }
 
 function asy(action) {
 	async function wrap() {
 		await action()
 	}
-	wrap().catch(e => showError(e))
+	wrap().catch(e => error(e))
 }
-
-let page;
 
 async function goto(url, current) {
 
@@ -234,7 +234,7 @@ export {
 	start,
 	api,
 	asy,
-	setShowError,
+	error,
 	goto
 };
 
