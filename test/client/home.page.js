@@ -10,55 +10,59 @@ export default {
         }).text(e.toString()));
     },
     async render(container, page, params) {
-
-        let divA, divB, divResult, divFirstName, divLastName, divGreetings, divCounter;
-
-        container.append(
+        return [
             DIV("errors", d => divErrors = d),
             DIV("test div", [
                 DIV("label").text("Error handling test"),
-                DIV("line", [
-                    NUMBER(d => divA = d).val(10),
-                    DIV().text("/"),
-                    NUMBER(d => divB = d).val(0),
-                    DIV().text("="),
-                    DIV(d => divResult = d),
-                    DIV("end", [
-                        BUTTON().text("test").click(() => {
-                            asy(async () => {
-                                let [result, reminder] = await api.div(
-                                    Number.parseInt(divA.val()),
-                                    Number.parseInt(divB.val())
-                                );
-                                divResult.text(result + (reminder ? " rem. " + reminder : ""));
+                DIV("line", () => {
+                    let inA, inB, divResult;
+                    return [
+                        NUMBER(d => inA = d).val(10),
+                        DIV().text("/"),
+                        NUMBER(d => inB = d).val(0),
+                        DIV().text("="),
+                        DIV(d => divResult = d),
+                        DIV("end", [
+                            BUTTON().text("test").click(() => {
+                                asy(async () => {
+                                    let [result, reminder] = await api.div(
+                                        Number.parseInt(inA.val()),
+                                        Number.parseInt(inB.val())
+                                    );
+                                    divResult.text(result + (reminder ? " rem. " + reminder : ""));
+                                })
                             })
-                        })
-                    ])
-                ]),
+                        ])
+                    ]
+                }),
                 DIV("notes").text("This is a call to div API service, to demonstrate error handling.")
             ]),
-            DIV("test greetings", [
-                DIV("label").text("Complex parameters test"),
-                DIV("line", [
-                    DIV().text("First name:"),
-                    TEXT(d => divFirstName = d).val("Zaphod"),
-                    DIV().text("Last name:"),
-                    TEXT(d => divLastName = d).val("Beeblebrox"),
-                    DIV("end", [
-                        BUTTON().text("test").click(() => {
-                            asy(async () => {
-                                let greetings = await api.greet({
-                                    firstName: divFirstName.val(),
-                                    lastName: divLastName.val()
-                                });
-                                divGreetings.append(greetings.map(g => DIV().text(g)))
+            DIV("test greetings", () => {
+                let inFirstName, inLastName, divGreetings;
+                return [
+                    DIV("label").text("Complex parameters test"),
+                    DIV("line", [
+                        DIV().text("First name:"),
+                        TEXT(d => inFirstName = d).val("Zaphod"),
+                        DIV().text("Last name:"),
+                        TEXT(d => inLastName = d).val("Beeblebrox"),
+                        DIV("end", [
+                            BUTTON().text("test").click(() => {
+                                asy(async () => {
+                                    let greetings = await api.greet({
+                                        firstName: inFirstName.val(),
+                                        lastName: inLastName.val()
+                                    });
+                                    divGreetings.append(greetings.map(g => DIV().text(g)))
+                                })
                             })
-                        })
-                    ])
-                ]),
-                DIV("greetings", d => divGreetings = d),
-                DIV("notes").text("Service parameters and reurn values may be arrays or objects. If the go function returns more than one result, it is returned as array.")
-            ]),
+                        ])
+                    ]
+                    ),
+                    DIV("greetings", d => divGreetings = d),
+                    DIV("notes").text("Service parameters and reurn values may be arrays or objects. If the go function returns more than one result, it is returned as array.")
+                ]
+            }),
             DIV("test sessionid", [
                 DIV("label").text("Session ID"),
                 DIV("line", [
@@ -70,22 +74,25 @@ export default {
             ]),
             DIV("test div", [
                 DIV("label").text("Server session test"),
-                DIV("line", [
-                    DIV().text("counter:"),
-                    DIV(d => {
-                        divCounter = d;
-                        asy(async () => {
-                            divCounter.text(await api.inc(0));
-                        })
-                    }),
-                    DIV("end", [
-                        BUTTON().text("test").click(() => {
+                DIV("line", () => {
+                    let divCounter;
+                    return [
+                        DIV().text("counter:"),
+                        DIV(d => {
+                            divCounter = d;
                             asy(async () => {
-                                divCounter.text(await api.inc(1));
+                                divCounter.text(await api.inc(0));
                             })
-                        })
-                    ])
-                ]),
+                        }),
+                        DIV("end", [
+                            BUTTON().text("test").click(() => {
+                                asy(async () => {
+                                    divCounter.text(await api.inc(1));
+                                })
+                            })
+                        ])
+                    ]
+                }),
                 DIV("notes").text("The inc function increments a counter in the server session. The counter is stored in the session, so it is incremented even if you refresh the page.")
             ]),
             DIV("test div", [
@@ -95,6 +102,6 @@ export default {
                 ]),
                 DIV("notes").text("This shows page navigation support. The link above takes you to another page. Note the page is not actually reloaded, it is just re-rendered.")
             ])
-        )
+        ];
     }
 }

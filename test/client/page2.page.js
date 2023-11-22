@@ -1,8 +1,7 @@
 export default {
     title: "WebGlue page2",
     async render(container, page, params) {
-
-        container.append(
+        return [
             DIV("test div", [
                 DIV("label").text("Just another page"),
                 DIV("line", [
@@ -10,6 +9,6 @@ export default {
                 ]),
                 DIV("notes").text("This shows page navigation support. If you come here from home page, you can go back by clicking the link above or by pressing the browser's back button.")
             ])
-        )
+        ];
     }
 }

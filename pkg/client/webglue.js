@@ -83,7 +83,10 @@ async function goto(url, current) {
 	if (render) {
 		console.info("Rendering", url, params);
 		document.title = page.title || url;
-		await page.render(root, url, params);
+		let children = await page.render(root, url, params);
+		if (children) {
+			root.append(children);
+		}
 	}
 }
 
@@ -103,19 +106,32 @@ async function startAsync() {
 	function createFactory(fncName, htmlTag) {
 		window[fncName] = (...args) => {
 			let el = $(`<${htmlTag}>`);
-			args.forEach(arg => {
+
+			function process(arg) {
 				if (arg instanceof Array) {
 					el.append(arg);
 				} else if (arg instanceof Function) {
-					asy(async () => {
-						await arg(el);
-					})
+						function maybeProcess(result) {
+							if (result != el && result != undefined && result != null) {
+								process(result);
+							}
+						}
+						let result = arg(el);
+						if (result instanceof Promise) {
+							asy(async () => {
+								maybeProcess(await result);
+							})
+						} else {
+							maybeProcess(result);
+						}
 				} else if (arg instanceof Object) {
 					el.attr(arg);
 				} else if (typeof arg === "string") {
 					el.addClass(arg);
 				}
-			});
+			}
+
+			args.forEach(arg => process(arg));
 			return el;
 		};
 	}
