@@ -41,9 +41,9 @@ export default {
                 DIV("label").text("Complex parameters test"),
                 DIV("line", [
                     DIV().text("First name:"),
-                    INPUT(d => divFirstName = d).val("Zaphod"),
+                    TEXT(d => divFirstName = d).val("Zaphod"),
                     DIV().text("Last name:"),
-                    INPUT(d => divLastName = d).val("Beeblebrox"),
+                    TEXT(d => divLastName = d).val("Beeblebrox"),
                     DIV("end", [
                         BUTTON().text("test").click(() => {
                             asy(async () => {
