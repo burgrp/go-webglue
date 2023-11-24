@@ -185,9 +185,9 @@ async function startAsync() {
 
 	let pingIntervalSec;
 
-	async function callApi({ method, suffix, body }) {
+	async function callApiEndpoint({ method, suffix, body }) {
 		let sessionId = localStorage.getItem("Webglue-Session");
-		let apiResponse = await fetch("/api/" + (suffix || ""), {
+		let apiResponse = await fetch("/api/" + suffix, {
 			method,
 			headers: {
 				"Content-Type": "application/json",
@@ -203,30 +203,37 @@ async function startAsync() {
 		return method == "HEAD" ? undefined : await apiResponse.json();
 	}
 
-	let names = await callApi({
-		method: "GET",
-	});
-
-	api = names.reduce((acc, name) => ({
-		...acc,
-		[name]: async function (...params) {
-			let reply = await callApi({
-				method: "POST",
-				suffix: name,
-				body: params
-			})
-
-			if (reply.error) {
-				throw new Error(reply.error);
-			}
-			return reply.result;
+	async function callApiFunction(moduleName, functionName, ...params) {
+		let apiResponse = await callApiEndpoint({
+			method: "POST",
+			suffix: moduleName + "/" + functionName,
+			body: params
+		});
+		if (apiResponse.error) {
+			throw new Error(apiResponse.error);
+		} else {
+			return apiResponse.result;
 		}
-	}), api);
+	}
+
+	let modules = await callApiFunction("webglue", "discover");
+
+	api = Object.fromEntries(
+		Object.entries(modules).map(([moduleName, module]) => [
+			moduleName,
+			Object.fromEntries(
+				(module.functions || []).map(functionName => [
+					functionName,
+					(...params) => callApiFunction(moduleName, functionName, ...params)
+				])
+			)
+		])
+	)
 
 	async function pingLoop() {
 		while (true) {
 			try {
-				await callApi({
+				await callApiEndpoint({
 					method: "HEAD",
 				});
 			} catch (err) {

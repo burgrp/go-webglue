@@ -10,10 +10,13 @@ import (
 )
 
 type ApiMarshaler struct {
+	allModules []Module
 }
 
-func newApiMarshaler(options Options) (*ApiMarshaler, error) {
-	return &ApiMarshaler{}, nil
+func newApiMarshaler(options *Options, allModules []Module) (*ApiMarshaler, error) {
+	return &ApiMarshaler{
+		allModules: allModules,
+	}, nil
 }
 
 type ErrorReply struct {
@@ -33,25 +36,25 @@ type ResultReply struct {
 	Result any `json:"result"`
 }
 
-func (marshaler *ApiMarshaler) describe(receiver any, writer io.Writer) {
+func (marshaler *ApiMarshaler) call(ctx context.Context, moduleName string, functionName string, reader io.Reader, writer io.Writer) {
 
-	modPtrType := (reflect.TypeOf(receiver))
+	goFunctionName := strings.ToUpper(functionName[0:1]) + functionName[1:]
 
-	list := make([]string, modPtrType.NumMethod())
-	for i := 0; i < len(list); i++ {
-		name := modPtrType.Method(i).Name
-		list[i] = strings.ToLower(name[0:1]) + name[1:]
+	var receiver any
+	for _, module := range marshaler.allModules {
+		if module.Name == moduleName {
+			receiver = module.Api
+			break
+		}
 	}
-	json.NewEncoder(writer).Encode(list)
-}
-
-func (marshaler *ApiMarshaler) call(receiver any, ctx context.Context, function string, reader io.Reader, writer io.Writer) {
-
-	fncGoName := strings.ToUpper(function[0:1]) + function[1:]
+	if receiver == nil {
+		MarshalError(errors.New("module API not found"), writer)
+		return
+	}
 
 	modPtrType := (reflect.TypeOf(receiver))
 
-	fncValue, ok := modPtrType.MethodByName(fncGoName)
+	fncValue, ok := modPtrType.MethodByName(goFunctionName)
 	if !ok {
 		MarshalError(errors.New("function not found"), writer)
 		return

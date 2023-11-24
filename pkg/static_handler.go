@@ -2,7 +2,6 @@ package webglue
 
 import (
 	"context"
-	"embed"
 	"errors"
 	"io/fs"
 	"mime"
@@ -41,9 +40,6 @@ type StaticHandler struct {
 	devFiles    map[string]string
 }
 
-//go:embed client
-var clientResources embed.FS
-
 func (handler *StaticHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	webPath := request.URL.Path
@@ -67,13 +63,7 @@ func (handler *StaticHandler) ServeHTTP(writer http.ResponseWriter, request *htt
 	writer.Write([]byte(handler.indexHtml))
 }
 
-func newStaticHandler(ctx context.Context, options Options) (*StaticHandler, error) {
-	allModules := append([]Module{
-		{
-			Name:      "webglue",
-			Resources: clientResources,
-		},
-	}, options.Modules...)
+func newStaticHandler(ctx context.Context, options *Options, allModules []Module) (*StaticHandler, error) {
 
 	indexHtml := DefaultIndexHtml
 	if options.IndexHtml != "" {
@@ -87,6 +77,10 @@ func newStaticHandler(ctx context.Context, options Options) (*StaticHandler, err
 	devFiles := map[string]string{}
 
 	for _, module := range allModules {
+
+		if module.Resources == nil {
+			continue
+		}
 
 		devPath := os.Getenv(strings.ToUpper(module.Name) + "_DEV")
 

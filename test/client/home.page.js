@@ -25,7 +25,7 @@ export default {
                         DIV("end", [
                             BUTTON().text("test").click(() => {
                                 asy(async () => {
-                                    let [result, reminder] = await api.div(
+                                    let [result, reminder] = await api.test.div(
                                         Number.parseInt(inA.val()),
                                         Number.parseInt(inB.val())
                                     );
@@ -49,7 +49,7 @@ export default {
                         DIV("end", [
                             BUTTON().text("test").click(() => {
                                 asy(async () => {
-                                    let greetings = await api.greet({
+                                    let greetings = await api.test.greet({
                                         firstName: inFirstName.val(),
                                         lastName: inLastName.val()
                                     });
@@ -67,7 +67,7 @@ export default {
                 DIV("label").text("Session ID"),
                 DIV("line", [
                     DIV(async d => {
-                        d.text(await api.getId());
+                        d.text(await api.test.getId());
                     }),
                 ]),
                 DIV("notes").text("The getId function returns the session ID. The session ID is stored in the browser's local storage, so it is preserved even if you refresh the page.")
@@ -81,13 +81,13 @@ export default {
                         DIV(d => {
                             divCounter = d;
                             asy(async () => {
-                                divCounter.text(await api.inc(0));
+                                divCounter.text(await api.test.inc(0));
                             })
                         }),
                         DIV("end", [
                             BUTTON().text("test").click(() => {
                                 asy(async () => {
-                                    divCounter.text(await api.inc(1));
+                                    divCounter.text(await api.test.inc(1));
                                 })
                             })
                         ])

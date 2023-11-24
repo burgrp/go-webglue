@@ -10,7 +10,9 @@ type ApiFunction func(request []byte) ([]byte, error)
 
 type Module struct {
 	Name      string
-	Resources embed.FS
+	Resources *embed.FS
+	Events    []*Event
+	Api       any
 }
 
 type SessionFactory func(id string) any
@@ -31,12 +33,21 @@ func NewHandler(options Options) (http.Handler, error) {
 		ctx = context.Background()
 	}
 
-	staticHandler, err := newStaticHandler(ctx, options)
+	allModules := append([]Module{
+		newCoreModule(&options),
+	}, options.Modules...)
+
+	staticHandler, err := newStaticHandler(ctx, &options, allModules)
 	if err != nil {
 		return nil, err
 	}
 
-	apiHandler, err := newMessageHandler(ctx, options)
+	apiHandler, err := newMessageHandler(ctx, &options, allModules)
+	if err != nil {
+		return nil, err
+	}
+
+	eventHandler, err := newEventHandler(ctx, &options, allModules)
 	if err != nil {
 		return nil, err
 	}
@@ -45,7 +56,7 @@ func NewHandler(options Options) (http.Handler, error) {
 
 	mux.Handle("/", staticHandler)
 	mux.Handle("/api/", apiHandler)
+	mux.Handle("/events", eventHandler)
 
 	return &mux, nil
-
 }
