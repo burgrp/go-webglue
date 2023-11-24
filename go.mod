@@ -1,4 +1,4 @@
-module go-webglue
+module github.com/burgrp/go-webglue
 
 go 1.20
 

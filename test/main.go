@@ -4,9 +4,10 @@ import (
 	"context"
 	"embed"
 	"errors"
-	webglue "go-webglue/pkg"
 	"net/http"
 	"time"
+
+	webglue "github.com/burgrp/go-webglue/pkg"
 )
 
 //go:embed client/*
