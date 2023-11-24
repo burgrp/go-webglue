@@ -62,11 +62,7 @@ func main() {
 	go func() {
 		for {
 			time.Sleep(1 * time.Second)
-			tickEvent.Emit(struct {
-				Time time.Time `json:"time"`
-			}{
-				Time: time.Now(),
-			})
+			tickEvent.Emit(time.Now().Unix())
 		}
 	}()
 

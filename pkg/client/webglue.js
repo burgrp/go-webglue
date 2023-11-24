@@ -111,19 +111,19 @@ async function startAsync() {
 				if (arg instanceof Array) {
 					el.append(arg);
 				} else if (arg instanceof Function) {
-						function maybeProcess(result) {
-							if (result != el && result != undefined && result != null) {
-								process(result);
-							}
+					function maybeProcess(result) {
+						if (result != el && result != undefined && result != null) {
+							process(result);
 						}
-						let result = arg(el);
-						if (result instanceof Promise) {
-							asy(async () => {
-								maybeProcess(await result);
-							})
-						} else {
-							maybeProcess(result);
-						}
+					}
+					let result = arg(el);
+					if (result instanceof Promise) {
+						asy(async () => {
+							maybeProcess(await result);
+						})
+					} else {
+						maybeProcess(result);
+					}
 				} else if (arg instanceof Object) {
 					el.attr(arg);
 				} else if (typeof arg === "string") {
@@ -187,7 +187,7 @@ async function startAsync() {
 
 	async function callApiEndpoint({ method, suffix, body }) {
 		let sessionId = localStorage.getItem("Webglue-Session");
-		let apiResponse = await fetch("/api/" + suffix, {
+		let apiResponse = await fetch("api/" + suffix, {
 			method,
 			headers: {
 				"Content-Type": "application/json",
@@ -229,6 +229,28 @@ async function startAsync() {
 			)
 		])
 	)
+
+	Object.entries(modules).forEach(([moduleName, module]) => {
+		(module.events || []).forEach(eventName => {
+			let initcap = s => s.charAt(0).toUpperCase() + s.slice(1);
+			let methodName = "on" + (moduleName ? initcap(moduleName) : "") + initcap(eventName);
+			let jqName = "webglue." + (moduleName ? moduleName + "." : "") + eventName;
+			$.fn[methodName] = function (handler) {
+				this.on(jqName, (e, ...args) => {
+					if (e.currentTarget === e.target) {
+						let receiver = $(e.target);
+						handler.apply(receiver, [receiver, ...args]);
+					}
+				});
+				return this;
+			};
+		});
+	});
+
+	new EventSource("events?stream=webglue").onmessage = e => {
+		let data = JSON.parse(e.data);
+		$("*").trigger(`webglue.${data.module}.${data.name}`, data.params);
+	}
 
 	async function pingLoop() {
 		while (true) {

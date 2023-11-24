@@ -9,20 +9,23 @@ import (
 )
 
 const (
-	EventStreamName = "events"
+	EventStreamName = "webglue"
 )
 
 type Event struct {
+	Module string
 	Name   string
 	server *sse.Server
 }
 
-func (event *Event) Emit(params any) (bool, error) {
+func (event *Event) Emit(params ...any) (bool, error) {
 	data, err := json.Marshal(struct {
-		Event  string `json:"event"`
+		Module string `json:"module"`
+		Name   string `json:"name"`
 		Params any    `json:"params"`
 	}{
-		Event:  event.Name,
+		Module: event.Module,
+		Name:   event.Name,
 		Params: params,
 	})
 	if err != nil {
@@ -53,6 +56,7 @@ func newEventHandler(ctx context.Context, options *Options, allModules []Module)
 	for _, module := range options.Modules {
 		for _, event := range module.Events {
 			event.server = eventHandler
+			event.Module = module.Name
 		}
 	}
 

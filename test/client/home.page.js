@@ -72,7 +72,7 @@ export default {
                 ]),
                 DIV("notes").text("The getId function returns the session ID. The session ID is stored in the browser's local storage, so it is preserved even if you refresh the page.")
             ]),
-            DIV("test div", [
+            DIV("test", [
                 DIV("label").text("Server session test"),
                 DIV("line", () => {
                     let divCounter;
@@ -95,7 +95,15 @@ export default {
                 }),
                 DIV("notes").text("The inc function increments a counter in the server session. The counter is stored in the session, so it is incremented even if you refresh the page.")
             ]),
-            DIV("test div", [
+            DIV("test", [
+                DIV("label").text("Server events"),
+                DIV("line", [
+                    DIV().onTestTick((div, time) => {
+                        $(div).text(new Date(time * 1000).toJSON());
+                    })
+                ]),
+            ]),
+            DIV("test", [
                 DIV("label").text("Page navigation"),
                 DIV("line", [
                     AHREF({ href: "/page2" }).text("Go to page 2"),
