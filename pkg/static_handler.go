@@ -94,6 +94,8 @@ func newStaticHandler(ctx context.Context, options *Options, allModules []Module
 	mini.AddFunc(".json", json.Minify)
 	mini.AddFunc(".xml", xml.Minify)
 
+	anyDev := false
+
 	for _, module := range allModules {
 
 		if module.Resources == nil {
@@ -127,6 +129,7 @@ func newStaticHandler(ctx context.Context, options *Options, allModules []Module
 
 				if devPath != "" {
 					devFiles["/"+webPath] = devPath + "/" + webPath
+					anyDev = true
 				} else {
 					content, err := module.Resources.ReadFile(filePath)
 					if err != nil {
@@ -181,6 +184,15 @@ func newStaticHandler(ctx context.Context, options *Options, allModules []Module
 	genCode += "\t\t\t\t}\n\t\t\t}\n\t\t</script>"
 
 	indexHtml = strings.ReplaceAll(indexHtml, WebgluePlaceholder, genCode)
+
+	if !anyDev {
+		reader := strings.NewReader(indexHtml)
+		writer := &strings.Builder{}
+		err := mini.Minify(".html", writer, reader)
+		if err == nil {
+			indexHtml = writer.String()
+		}
+	}
 
 	return &StaticHandler{
 		indexHtml:   indexHtml,
