@@ -252,22 +252,23 @@ async function startAsync() {
 		$("*").trigger(`webglue.${data.module}.${data.name}`, data.params);
 	}
 
-	async function pingLoop() {
-		while (true) {
-			try {
-				await callApiEndpoint({
-					method: "HEAD",
-				});
-			} catch (err) {
-				console.error("Error in ping loop:", err);
-			}
-			await new Promise((resolve, reject) => { setTimeout(resolve, pingIntervalSec * 1000); });
-		}
-	}
+	// DISABLED TILL WE NEED IT FOR SESSION KEEPALIVE
+	// async function pingLoop() {
+	// 	while (true) {
+	// 		try {
+	// 			await callApiEndpoint({
+	// 				method: "HEAD",
+	// 			});
+	// 		} catch (err) {
+	// 			console.error("Error in ping loop:", err);
+	// 		}
+	// 		await new Promise((resolve, reject) => { setTimeout(resolve, pingIntervalSec * 1000); });
+	// 	}
+	// }
 
-	pingLoop().catch(err => {
-		console.error("Unhandled error in ping loop:", err);
-	});
+	// pingLoop().catch(err => {
+	// 	console.error("Unhandled error in ping loop:", err);
+	// });
 
 	/**** and the UI ****/
 
