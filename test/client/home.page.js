@@ -99,7 +99,7 @@ export default {
                 DIV("label").text("Server events"),
                 DIV("line", [
                     DIV().onTestTick((div, time) => {
-                        $(div).text(new Date(time * 1000).toJSON());
+                        $(div).text(new Date(time / 1000).toJSON());
                     })
                 ]),
             ]),
