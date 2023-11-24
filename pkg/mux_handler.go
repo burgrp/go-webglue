@@ -42,7 +42,7 @@ func NewHandler(options Options) (http.Handler, error) {
 		return nil, err
 	}
 
-	apiHandler, err := newMessageHandler(ctx, &options, allModules)
+	apiHandler, err := newApiHandler(ctx, &options, allModules)
 	if err != nil {
 		return nil, err
 	}

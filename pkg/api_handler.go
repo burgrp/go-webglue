@@ -75,7 +75,7 @@ func (handler *ApiHandler) ServeHTTP(writer http.ResponseWriter, request *http.R
 
 }
 
-func newMessageHandler(ctx context.Context, options *Options, allModules []Module) (*ApiHandler, error) {
+func newApiHandler(ctx context.Context, options *Options, allModules []Module) (*ApiHandler, error) {
 
 	apiMarshaler, err := newApiMarshaler(options, allModules)
 	if err != nil {
