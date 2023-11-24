@@ -10,6 +10,14 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/tdewolff/minify/v2"
+	"github.com/tdewolff/minify/v2/css"
+	"github.com/tdewolff/minify/v2/html"
+	"github.com/tdewolff/minify/v2/js"
+	"github.com/tdewolff/minify/v2/json"
+	"github.com/tdewolff/minify/v2/svg"
+	"github.com/tdewolff/minify/v2/xml"
 )
 
 const (
@@ -52,6 +60,8 @@ func (handler *StaticHandler) ServeHTTP(writer http.ResponseWriter, request *htt
 
 	header := writer.Header()
 
+	header.Set("Cache-Control", "max-age=31536000")
+
 	data, ok := handler.cachedFiles[webPath]
 	if ok {
 		header.Set("Content-Type", mime.TypeByExtension(filepath.Ext(webPath)))
@@ -75,6 +85,14 @@ func newStaticHandler(ctx context.Context, options *Options, allModules []Module
 
 	cachedFiles := map[string][]byte{}
 	devFiles := map[string]string{}
+
+	mini := minify.New()
+	mini.AddFunc(".css", css.Minify)
+	mini.AddFunc(".html", html.Minify)
+	mini.AddFunc(".svg", svg.Minify)
+	mini.AddFunc(".js", js.Minify)
+	mini.AddFunc(".json", json.Minify)
+	mini.AddFunc(".xml", xml.Minify)
 
 	for _, module := range allModules {
 
@@ -110,10 +128,21 @@ func newStaticHandler(ctx context.Context, options *Options, allModules []Module
 				if devPath != "" {
 					devFiles["/"+webPath] = devPath + "/" + webPath
 				} else {
-					cachedFiles["/"+webPath], err = module.Resources.ReadFile(filePath)
+					content, err := module.Resources.ReadFile(filePath)
 					if err != nil {
 						return err
 					}
+
+					ext := filepath.Ext(filePath)
+					reader := strings.NewReader(string(content))
+					writer := &strings.Builder{}
+
+					err = mini.Minify(ext, writer, reader)
+					if err == nil {
+						content = []byte(writer.String())
+					}
+
+					cachedFiles["/"+webPath] = content
 				}
 
 				if strings.HasSuffix(webPath, ".css") {
