@@ -2,6 +2,67 @@
 
 import "jquery";
 
+/**** tag factories ****/
+
+let tags = {};
+
+function createFactory(fncName, htmlTag) {
+	tags[fncName] = (...args) => {
+		let el = $(`<${htmlTag}>`);
+
+		function process(arg) {
+			if (arg instanceof Array) {
+				el.append(arg);
+			} else if (arg instanceof Function) {
+				function maybeProcess(result) {
+					if (result != el && result != undefined && result != null) {
+						process(result);
+					}
+				}
+				let result = arg(el);
+				if (result instanceof Promise) {
+					asy(async () => {
+						maybeProcess(await result);
+					})
+				} else {
+					maybeProcess(result);
+				}
+			} else if (arg instanceof Object) {
+				el.attr(arg);
+			} else if (typeof arg === "string") {
+				el.addClass(arg);
+			}
+		}
+
+		args.forEach(arg => process(arg));
+		return el;
+	};
+}
+
+createFactory("DIV", "div");
+createFactory("SPAN", "span");
+createFactory("H1", "h1");
+createFactory("H2", "h2");
+createFactory("H3", "h3");
+createFactory("AHREF", "a");
+createFactory("BUTTON", "button");
+createFactory("LABEL", "label");
+createFactory("PAR", "p");
+createFactory("IMG", "img");
+createFactory("SETOFF", "i");
+createFactory("FORM", "form");
+createFactory("SELECT", "select");
+createFactory("OPTION", "option");
+createFactory("INPUT", "input");
+createFactory("TEXT", 'input type="text"');
+createFactory("PASSWORD", "input type='password'");
+createFactory("NUMBER", 'input type="number"');
+createFactory("CHECKBOX", 'input type="checkbox"');
+createFactory("TEXTAREA", "textarea");
+createFactory("TABLE", "table");
+createFactory("TR", "tr");
+createFactory("TD", "td");
+
 let api = {};
 
 let page;
@@ -65,9 +126,9 @@ async function goto(url, current) {
 		console.error(e);
 		page = {
 			title: "Not found",
-			render(root, page) {
-				root.append(DIV("error").text(`Page '${page}' not found.`));
-			}
+			render: (root, page) => [
+				tags.DIV("error").text(`Page '${page}' not found.`)
+			]
 		}
 	}
 
@@ -216,67 +277,6 @@ async function startAsync() {
 	goto(window.location.pathname + window.location.search, true);
 
 }
-
-/**** tag factories ****/
-
-let tags = {};
-
-function createFactory(fncName, htmlTag) {
-	tags[fncName] = (...args) => {
-		let el = $(`<${htmlTag}>`);
-
-		function process(arg) {
-			if (arg instanceof Array) {
-				el.append(arg);
-			} else if (arg instanceof Function) {
-				function maybeProcess(result) {
-					if (result != el && result != undefined && result != null) {
-						process(result);
-					}
-				}
-				let result = arg(el);
-				if (result instanceof Promise) {
-					asy(async () => {
-						maybeProcess(await result);
-					})
-				} else {
-					maybeProcess(result);
-				}
-			} else if (arg instanceof Object) {
-				el.attr(arg);
-			} else if (typeof arg === "string") {
-				el.addClass(arg);
-			}
-		}
-
-		args.forEach(arg => process(arg));
-		return el;
-	};
-}
-
-createFactory("DIV", "div");
-createFactory("SPAN", "span");
-createFactory("H1", "h1");
-createFactory("H2", "h2");
-createFactory("H3", "h3");
-createFactory("AHREF", "a");
-createFactory("BUTTON", "button");
-createFactory("LABEL", "label");
-createFactory("PAR", "p");
-createFactory("IMG", "img");
-createFactory("SETOFF", "i");
-createFactory("FORM", "form");
-createFactory("SELECT", "select");
-createFactory("OPTION", "option");
-createFactory("INPUT", "input");
-createFactory("TEXT", 'input type="text"');
-createFactory("PASSWORD", "input type='password'");
-createFactory("NUMBER", 'input type="number"');
-createFactory("CHECKBOX", 'input type="checkbox"');
-createFactory("TEXTAREA", "textarea");
-createFactory("TABLE", "table");
-createFactory("TR", "tr");
-createFactory("TD", "td");
 
 export {
 	start,
