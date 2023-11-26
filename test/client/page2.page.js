@@ -1,3 +1,7 @@
+import { tags } from "webglue";
+
+let { DIV, AHREF } = tags;
+
 export default {
     title: "WebGlue page2",
     async render(container, page, params) {

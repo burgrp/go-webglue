@@ -1,4 +1,6 @@
-import { api, asy } from "webglue";
+import { api, asy, tags } from "webglue";
+
+let { DIV, BUTTON, NUMBER, TEXT, AHREF } = tags;
 
 let divErrors;
 
