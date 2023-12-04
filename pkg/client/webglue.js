@@ -58,6 +58,7 @@ createFactory("TEXT", 'input type="text"');
 createFactory("PASSWORD", "input type='password'");
 createFactory("NUMBER", 'input type="number"');
 createFactory("CHECKBOX", 'input type="checkbox"');
+createFactory("RADIO", 'input type="radio"');
 createFactory("TEXTAREA", "textarea");
 createFactory("TABLE", "table");
 createFactory("TR", "tr");
@@ -126,8 +127,8 @@ async function goto(url, current) {
 		console.error(e);
 		page = {
 			title: "Not found",
-			render: (root, page) => [
-				tags.DIV("error").text(`Page '${page}' not found.`)
+			render: path => [
+				tags.DIV("error").text(`Page '${path}' not found.`)
 			]
 		}
 	}
@@ -144,7 +145,7 @@ async function goto(url, current) {
 	if (render) {
 		console.info("Rendering", url, params);
 		document.title = page.title || url;
-		let children = await page.render(root, url, params);
+		let children = await page.render(url, params);
 		if (children) {
 			root.append(children);
 		}
