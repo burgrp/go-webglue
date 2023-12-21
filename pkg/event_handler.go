@@ -3,7 +3,6 @@ package webglue
 import (
 	"context"
 	"encoding/json"
-	"errors"
 
 	sse "github.com/r3labs/sse/v2"
 )
@@ -18,8 +17,38 @@ type Event struct {
 	server *sse.Server
 }
 
-func (event *Event) Emit(params ...any) (bool, error) {
-	data, err := json.Marshal(struct {
+func NewEvent(name string) *Event {
+	return &Event{
+		Name: name,
+	}
+}
+
+func (event *Event) MustEmit(params ...any) {
+	data, err := event.marshall(params...)
+	if err != nil {
+		panic(err)
+	}
+
+	if event.server == nil {
+		panic("event not bound to server")
+	}
+
+	event.server.Publish(EventStreamName, &sse.Event{
+		Data: data,
+	})
+}
+
+func (event *Event) TryEmit(params ...any) {
+	data, err := event.marshall(params...)
+	if err == nil && event.server != nil {
+		event.server.TryPublish(EventStreamName, &sse.Event{
+			Data: data,
+		})
+	}
+}
+
+func (event *Event) marshall(params ...any) ([]byte, error) {
+	return json.Marshal(struct {
 		Module string `json:"module"`
 		Name   string `json:"name"`
 		Params any    `json:"params"`
@@ -28,24 +57,6 @@ func (event *Event) Emit(params ...any) (bool, error) {
 		Name:   event.Name,
 		Params: params,
 	})
-	if err != nil {
-		return false, err
-	}
-
-	if event.server == nil {
-		return false, errors.New("event not bound to server")
-	}
-
-	return event.server.TryPublish(EventStreamName, &sse.Event{
-		Data: data,
-	}), nil
-
-}
-
-func NewEvent(name string) *Event {
-	return &Event{
-		Name: name,
-	}
 }
 
 func newEventHandler(ctx context.Context, options *Options, allModules []Module) (*sse.Server, error) {
