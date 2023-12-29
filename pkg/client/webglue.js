@@ -65,6 +65,7 @@ createFactory("TR", "tr");
 createFactory("TD", "td");
 createFactory("TH", "th");
 createFactory("ICON", "i");
+createFactory("FIELDSET", "fieldset");
 
 let api = {};
 
