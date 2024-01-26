@@ -63,7 +63,7 @@ func main() {
 	go func() {
 		for {
 			time.Sleep(100 * time.Millisecond)
-			tickEvent.Emit(time.Now().UnixMicro())
+			tickEvent.TryEmit(time.Now().UnixMicro())
 		}
 	}()
 
