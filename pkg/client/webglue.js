@@ -66,6 +66,7 @@ createFactory("TD", "td");
 createFactory("TH", "th");
 createFactory("ICON", "i");
 createFactory("FIELDSET", "fieldset");
+createFactory("IFRAME", "iframe");
 
 let api = {};
 
