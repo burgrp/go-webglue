@@ -13,8 +13,8 @@ type CoreApi struct {
 	Options *Options
 }
 
-func newCoreModule(Options *Options) Module {
-	return Module{
+func newCoreModule(Options *Options) *Module {
+	return &Module{
 		Name:      "webglue",
 		Resources: &clientResources,
 		Api: &CoreApi{

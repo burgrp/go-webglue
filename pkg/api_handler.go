@@ -1,7 +1,6 @@
 package webglue
 
 import (
-	"context"
 	"net/http"
 	"strconv"
 	"strings"
@@ -75,36 +74,16 @@ func (handler *ApiHandler) ServeHTTP(writer http.ResponseWriter, request *http.R
 
 }
 
-func newApiHandler(ctx context.Context, options *Options, allModules []Module) (*ApiHandler, error) {
+func newApiHandler(modules []*Module) (*ApiHandler, error) {
 
-	apiMarshaler, err := newApiMarshaler(options, allModules)
+	apiMarshaler, err := newApiMarshaler(modules)
 	if err != nil {
 		return nil, err
 	}
 
 	apiHandler := &ApiHandler{
-		// sessionAndTimestamps: make(map[string]*SessionAndTimestamp),
-		// sessionFactory:       options.SessionFactory,
 		apiMarshaler: apiMarshaler,
 	}
-
-	// go func() {
-	// 	for {
-	// 		select {
-	// 		case <-ctx.Done():
-	// 			return
-	// 		case <-time.After(1 * time.Second):
-	// 			apiHandler.sessionsLock.Lock()
-	// 			oldest := time.Now().Add(-SessionExpiration)
-	// 			for sid, sessionAndTimestamp := range apiHandler.sessionAndTimestamps {
-	// 				if sessionAndTimestamp.Timestamp.Before(oldest) {
-	// 					delete(apiHandler.sessionAndTimestamps, sid)
-	// 				}
-	// 			}
-	// 			apiHandler.sessionsLock.Unlock()
-	// 		}
-	// 	}
-	// }()
 
 	return apiHandler, nil
 }

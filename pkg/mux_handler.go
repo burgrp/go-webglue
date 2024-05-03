@@ -1,7 +1,6 @@
 package webglue
 
 import (
-	"context"
 	"embed"
 	"net/http"
 )
@@ -15,39 +14,28 @@ type Module struct {
 	Api       any
 }
 
-type SessionFactory func(id string) any
-
 type Options struct {
-	Modules        []Module
-	IndexHtml      string
-	SessionFactory SessionFactory
-	Context        context.Context
+	Modules   []*Module
+	IndexHtml string
 }
 
 func NewHandler(options Options) (http.Handler, error) {
 
-	var ctx context.Context
-	if options.Context != nil {
-		ctx = options.Context
-	} else {
-		ctx = context.Background()
-	}
-
-	allModules := append([]Module{
+	allModules := append([]*Module{
 		newCoreModule(&options),
 	}, options.Modules...)
 
-	staticHandler, err := newStaticHandler(ctx, &options, allModules)
+	staticHandler, err := newStaticHandler(allModules, options.IndexHtml)
 	if err != nil {
 		return nil, err
 	}
 
-	apiHandler, err := newApiHandler(ctx, &options, allModules)
+	apiHandler, err := newApiHandler(allModules)
 	if err != nil {
 		return nil, err
 	}
 
-	eventHandler, err := newEventHandler(ctx, &options, allModules)
+	eventHandler, err := newEventHandler(allModules)
 	if err != nil {
 		return nil, err
 	}

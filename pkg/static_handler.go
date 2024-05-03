@@ -1,7 +1,6 @@
 package webglue
 
 import (
-	"context"
 	"errors"
 	"io/fs"
 	"mime"
@@ -73,11 +72,10 @@ func (handler *StaticHandler) ServeHTTP(writer http.ResponseWriter, request *htt
 	writer.Write([]byte(handler.indexHtml))
 }
 
-func newStaticHandler(ctx context.Context, options *Options, allModules []Module) (*StaticHandler, error) {
+func newStaticHandler(allModules []*Module, indexHtml string) (*StaticHandler, error) {
 
-	indexHtml := DefaultIndexHtml
-	if options.IndexHtml != "" {
-		indexHtml = options.IndexHtml
+	if indexHtml == "" {
+		indexHtml = DefaultIndexHtml
 	}
 
 	refsCss := []string{}

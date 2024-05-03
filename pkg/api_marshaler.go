@@ -10,12 +10,12 @@ import (
 )
 
 type ApiMarshaler struct {
-	allModules []Module
+	modules []*Module
 }
 
-func newApiMarshaler(options *Options, allModules []Module) (*ApiMarshaler, error) {
+func newApiMarshaler(modules []*Module) (*ApiMarshaler, error) {
 	return &ApiMarshaler{
-		allModules: allModules,
+		modules: modules,
 	}, nil
 }
 
@@ -41,7 +41,7 @@ func (marshaler *ApiMarshaler) call(ctx context.Context, moduleName string, func
 	goFunctionName := strings.ToUpper(functionName[0:1]) + functionName[1:]
 
 	var receiver any
-	for _, module := range marshaler.allModules {
+	for _, module := range marshaler.modules {
 		if module.Name == moduleName {
 			receiver = module.Api
 			break
