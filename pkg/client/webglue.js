@@ -28,7 +28,7 @@ function createFactory(fncName, htmlTag) {
 					maybeProcess(result);
 				}
 			} else if (arg instanceof Object) {
-				el.attr(arg);
+				el.prop(arg);
 			} else if (typeof arg === "string") {
 				el.addClass(arg);
 			}
