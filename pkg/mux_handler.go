@@ -19,7 +19,7 @@ type Options struct {
 	IndexHtml string
 }
 
-func NewHandler(options Options) (http.Handler, error) {
+func NewHandler(options Options) (*http.ServeMux, error) {
 
 	allModules := append([]*Module{
 		newCoreModule(&options),
