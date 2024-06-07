@@ -254,10 +254,28 @@ async function startAsync() {
 		});
 	});
 
-	new EventSource("events?stream=webglue").onmessage = e => {
-		let data = JSON.parse(e.data);
-		$("*").trigger(`webglue.${data.module}.${data.name}`, data.params);
+	let eventSource
+
+	function checkEventSource() {
+		if (!eventSource || eventSource.readyState === 2) {
+			if (eventSource) {
+				console.error("Event source closed, reopening.");
+			}
+			eventSource = new EventSource("events?stream=webglue");
+			eventSource.onmessage = e => {
+				try {
+					let data = JSON.parse(e.data);
+					$("*").trigger(`webglue.${data.module}.${data.name}`, data.params);
+				} catch (err) {
+					console.error("Error processing event:", err);
+				}
+			}
+		}
 	}
+
+	checkEventSource();
+	setInterval(checkEventSource, 1000);
+
 
 	// DISABLED TILL WE NEED IT FOR SESSION KEEPALIVE
 	// async function pingLoop() {
