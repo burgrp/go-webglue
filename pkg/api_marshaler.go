@@ -2,12 +2,15 @@ package webglue
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"io"
 	"reflect"
 	"strings"
+
+	jsoniter "github.com/json-iterator/go"
 )
+
+var json = jsoniter.ConfigCompatibleWithStandardLibrary
 
 type ApiMarshaler struct {
 	modules []*Module

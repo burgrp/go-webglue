@@ -1,8 +1,6 @@
 package webglue
 
 import (
-	"encoding/json"
-
 	sse "github.com/r3labs/sse/v2"
 )
 

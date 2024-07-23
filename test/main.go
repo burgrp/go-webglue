@@ -48,7 +48,7 @@ func main() {
 	tickEvent := webglue.NewEvent("tick")
 
 	options := webglue.Options{
-		Modules: []webglue.Module{
+		Modules: []*webglue.Module{
 			{
 				Name:      "test",
 				Resources: &clientResources,
@@ -63,7 +63,7 @@ func main() {
 	go func() {
 		for {
 			time.Sleep(100 * time.Millisecond)
-			tickEvent.TryEmit(time.Now().UnixMicro())
+			tickEvent.Emit(time.Now().UnixMicro())
 		}
 	}()
 

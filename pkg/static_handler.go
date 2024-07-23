@@ -14,7 +14,7 @@ import (
 	"github.com/tdewolff/minify/v2/css"
 	"github.com/tdewolff/minify/v2/html"
 	"github.com/tdewolff/minify/v2/js"
-	"github.com/tdewolff/minify/v2/json"
+	jsn "github.com/tdewolff/minify/v2/json"
 	"github.com/tdewolff/minify/v2/svg"
 	"github.com/tdewolff/minify/v2/xml"
 )
@@ -89,7 +89,7 @@ func newStaticHandler(allModules []*Module, indexHtml string) (*StaticHandler, e
 	mini.AddFunc(".html", html.Minify)
 	mini.AddFunc(".svg", svg.Minify)
 	mini.AddFunc(".js", js.Minify)
-	mini.AddFunc(".json", json.Minify)
+	mini.AddFunc(".json", jsn.Minify)
 	mini.AddFunc(".xml", xml.Minify)
 
 	anyDev := false
