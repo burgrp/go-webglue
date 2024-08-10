@@ -59,8 +59,6 @@ func (handler *StaticHandler) ServeHTTP(writer http.ResponseWriter, request *htt
 
 	header := writer.Header()
 
-	//header.Set("Cache-Control", "max-age=31536000")
-
 	data, ok := handler.cachedFiles[webPath]
 	if ok {
 		header.Set("Content-Type", mime.TypeByExtension(filepath.Ext(webPath)))
