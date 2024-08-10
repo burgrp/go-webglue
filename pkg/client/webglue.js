@@ -297,6 +297,15 @@ async function startAsync() {
 
 	/**** and the UI ****/
 
+	$.fn["onWebglueTick"] = function (handler) {
+		this.on("webglue.tick", handler);
+		return this;
+	}
+
+	setInterval(() => {
+		$("*").trigger("webglue.tick");
+	}, 1000);
+
 	goto(window.location.pathname + window.location.search, true);
 
 }
