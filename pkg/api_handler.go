@@ -32,8 +32,8 @@ func MarshalError(err error, writer io.Writer) {
 	}
 }
 
-type TypedParametersProvider interface {
-	GetTypedParameters(request *http.Request, functionName string) ([]any, error)
+type CallChecker interface {
+	CheckCall(request *http.Request, functionName string) ([]any, error)
 }
 
 type ResultReply struct {
@@ -115,12 +115,12 @@ func (ah *ApiHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 		api,
 	}
 
-	if typedParamsProvider, ok := api.(TypedParametersProvider); ok {
+	if callChecker, ok := api.(CallChecker); ok {
 		if functionName == "GetTypedParameters" {
 			MarshalError(errors.New("GetTypedParameters function is not allowed"), writer)
 			return
 		}
-		tp, err := typedParamsProvider.GetTypedParameters(request, functionName)
+		tp, err := callChecker.CheckCall(request, functionName)
 		if err != nil {
 			MarshalError(err, writer)
 			return
