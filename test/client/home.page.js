@@ -75,7 +75,7 @@ export default {
                 DIV("notes").text("The getId function returns the session ID. The session ID is stored in the browser's local storage, so it is preserved even if you refresh the page.")
             ]),
             DIV("test", [
-                DIV("label").text("Server session test"),
+                DIV("label").text("Server instance test"),
                 DIV("line", () => {
                     let divCounter;
                     return [
@@ -95,7 +95,7 @@ export default {
                         ])
                     ]
                 }),
-                DIV("notes").text("The inc function increments a counter in the server session. The counter is stored in the session, so it is incremented even if you refresh the page.")
+                DIV("notes").text("The inc function increments a counter in the server API instance. The counter is stored in the API instance, so it is incremented even if you refresh the page.")
             ]),
             DIV("test", [
                 DIV("label").text("Server events"),
