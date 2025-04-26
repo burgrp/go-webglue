@@ -1,56 +1,51 @@
 package webglue
 
 import (
+	"encoding/json"
+	"errors"
+	"io"
 	"net/http"
-	"strconv"
+	"reflect"
 	"strings"
-	"time"
 )
 
 const (
-	// SessionHeader       = "Webglue-Session"
-	PingHeader          = "Webglue-Ping"
 	ContentTypeHeader   = "Content-Type"
 	ContentTypeJson     = "application/json"
 	ContentLengthHeader = "Content-Length"
-
-	SessionExpiration = 1 * time.Minute
-	SessionPing       = 10 * time.Second
 )
 
-// type SessionAndTimestamp struct {
-// 	Session   any
-// 	Timestamp time.Time
-// }
-
 type ApiHandler struct {
-	// nextSessionId        int
-	// sessionAndTimestamps map[string]*SessionAndTimestamp
-	// sessionsLock         sync.Mutex
-	// sessionFactory       SessionFactory
-	apiMarshaler *ApiMarshaler
+	modules []*Module
 }
 
-// func (handler *ApiHandler) getSession(sid string) (any, string) {
-// 	handler.sessionsLock.Lock()
-// 	defer handler.sessionsLock.Unlock()
+type ErrorReply struct {
+	Error string `json:"error"`
+}
 
-// 	sessionAndTimestamp, ok := handler.sessionAndTimestamps[sid]
-// 	if !ok {
-// 		sid = strconv.Itoa(handler.nextSessionId)
-// 		handler.nextSessionId++
+func MarshalError(err error, writer io.Writer) {
+	err2 := json.NewEncoder(writer).Encode(ErrorReply{
+		Error: err.Error(),
+	})
+	if err2 != nil {
+		panic(err)
+	}
+}
 
-// 		sessionAndTimestamp = &SessionAndTimestamp{
-// 			Session: handler.sessionFactory(sid),
-// 		}
-// 		handler.sessionAndTimestamps[sid] = sessionAndTimestamp
-// 	}
-// 	sessionAndTimestamp.Timestamp = time.Now()
-// 	return sessionAndTimestamp.Session, sid
-// }
+type ResultReply struct {
+	Result any `json:"result"`
+}
 
-func (handler *ApiHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
-	//session, sid := handler.getSession(request.Header.Get(SessionHeader))
+func newApiHandler(modules []*Module) (*ApiHandler, error) {
+
+	apiHandler := &ApiHandler{
+		modules: modules,
+	}
+
+	return apiHandler, nil
+}
+
+func (ah *ApiHandler) ServeHTTP(writer http.ResponseWriter, request *http.Request) {
 
 	pathSplit := strings.Split(request.URL.Path, "/")
 	if len(pathSplit) < 3 {
@@ -61,8 +56,6 @@ func (handler *ApiHandler) ServeHTTP(writer http.ResponseWriter, request *http.R
 	functionName := pathSplit[len(pathSplit)-1]
 
 	responseHeaders := writer.Header()
-	//responseHeaders.Set(SessionHeader, sid)
-	responseHeaders.Set(PingHeader, strconv.Itoa(int(SessionPing.Seconds())))
 	responseHeaders.Set(ContentTypeHeader, ContentTypeJson)
 
 	if request.Method == http.MethodHead {
@@ -70,20 +63,118 @@ func (handler *ApiHandler) ServeHTTP(writer http.ResponseWriter, request *http.R
 		return
 	}
 
-	handler.apiMarshaler.call(request.Context(), moduleName, functionName, request.Body, writer)
+	goFunctionName := strings.ToUpper(functionName[0:1]) + functionName[1:]
 
-}
+	var receiver any
+	for _, module := range ah.modules {
+		if module.Name == moduleName {
+			receiver = module.Api
+			break
+		}
+	}
+	if receiver == nil {
+		MarshalError(errors.New("module API not found"), writer)
+		return
+	}
 
-func newApiHandler(modules []*Module) (*ApiHandler, error) {
+	modPtrType := (reflect.TypeOf(receiver))
 
-	apiMarshaler, err := newApiMarshaler(modules)
+	fncValue, ok := modPtrType.MethodByName(goFunctionName)
+	if !ok {
+		MarshalError(errors.New("function not found"), writer)
+		return
+	}
+
+	fncType := fncValue.Type
+
+	if fncType.NumIn() < 1 {
+		MarshalError(errors.New("function must have receiver"), writer)
+		return
+	}
+
+	numIn := fncType.NumIn()
+	allParams := make([]reflect.Value, numIn)
+	unmParams := make([]any, numIn)
+	unmToAllMap := make(map[int]int, numIn)
+	unmParamsLen := 0
+
+	ctx := request.Context()
+
+	for i := 0; i < len(allParams); i++ {
+
+		paramType := fncType.In(i)
+
+		if reflect.TypeOf(ctx).AssignableTo(paramType) {
+			allParams[i] = reflect.ValueOf(ctx)
+			continue
+		}
+
+		if reflect.TypeOf(receiver).AssignableTo(paramType) {
+			allParams[i] = reflect.ValueOf(receiver)
+			continue
+		}
+
+		param := reflect.New(paramType)
+		unmParams[unmParamsLen] = param.Interface()
+		unmToAllMap[unmParamsLen] = i
+		unmParamsLen++
+	}
+	unmParams = unmParams[:unmParamsLen]
+
+	beforeUnmarshal := len(unmParams)
+
+	if beforeUnmarshal > 0 {
+		err := json.NewDecoder(request.Body).Decode(&unmParams)
+		if err != nil {
+			MarshalError(err, writer)
+			return
+		}
+	}
+
+	if len(unmParams) != beforeUnmarshal {
+		MarshalError(errors.New("wrong number of parameters"), writer)
+		return
+	}
+
+	for i := 0; i < len(unmParams); i++ {
+		paramValue := reflect.ValueOf(unmParams[i])
+		paramKind := paramValue.Kind()
+		if paramKind == reflect.Ptr || paramKind == reflect.Interface {
+			paramValue = paramValue.Elem()
+		} else {
+			MarshalError(errors.New("can not unmarshal parameter"), writer)
+			return
+		}
+		allParams[unmToAllMap[i]] = paramValue
+	}
+
+	allResults := fncValue.Func.Call(allParams)
+
+	results := make([]any, 0)
+	for _, result := range allResults {
+		if result.Type().AssignableTo(reflect.TypeOf((*error)(nil)).Elem()) {
+			if !result.IsNil() {
+				MarshalError(result.Interface().(error), writer)
+				return
+			}
+		} else {
+			results = append(results, result.Interface())
+		}
+	}
+
+	resultReply := ResultReply{}
+
+	if len(results) == 1 {
+		resultReply.Result = results[0]
+	}
+
+	if len(results) > 1 {
+		resultReply.Result = results
+	}
+
+	err := json.NewEncoder(writer).Encode(resultReply)
 	if err != nil {
-		return nil, err
+		MarshalError(err, writer)
+		return
 	}
-
-	apiHandler := &ApiHandler{
-		apiMarshaler: apiMarshaler,
-	}
-
-	return apiHandler, nil
 }
