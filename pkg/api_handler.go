@@ -32,6 +32,10 @@ func MarshalError(err error, writer io.Writer) {
 	}
 }
 
+type TypedParametersProvider interface {
+	GetTypedParameters(request *http.Request) []any
+}
+
 type ResultReply struct {
 	Result any `json:"result"`
 }
@@ -65,19 +69,26 @@ func (ah *ApiHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 
 	goFunctionName := strings.ToUpper(functionName[0:1]) + functionName[1:]
 
-	var receiver any
-	for _, module := range ah.modules {
-		if module.Name == moduleName {
-			receiver = module.Api
+	var module *Module
+	for _, m := range ah.modules {
+		if m.Name == moduleName {
+			module = m
 			break
 		}
 	}
-	if receiver == nil {
+
+	if module == nil {
+		MarshalError(errors.New("module not found"), writer)
+		return
+	}
+
+	api := module.Api
+	if api == nil {
 		MarshalError(errors.New("module API not found"), writer)
 		return
 	}
 
-	modPtrType := (reflect.TypeOf(receiver))
+	modPtrType := (reflect.TypeOf(api))
 
 	fncValue, ok := modPtrType.MethodByName(goFunctionName)
 	if !ok {
@@ -102,7 +113,15 @@ func (ah *ApiHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 
 	typedParams := []any{
 		ctx,
-		receiver,
+		api,
+	}
+
+	if typedParamsProvider, ok := api.(TypedParametersProvider); ok {
+		if goFunctionName == "GetTypedParameters" {
+			MarshalError(errors.New("GetTypedParameters function is not allowed"), writer)
+			return
+		}
+		typedParams = append(typedParams, typedParamsProvider.GetTypedParameters(request)...)
 	}
 
 outer:
