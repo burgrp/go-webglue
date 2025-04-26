@@ -100,18 +100,22 @@ func (ah *ApiHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 
 	ctx := request.Context()
 
+	typedParams := []any{
+		ctx,
+		receiver,
+	}
+
+outer:
 	for i := 0; i < len(allParams); i++ {
 
 		paramType := fncType.In(i)
 
-		if reflect.TypeOf(ctx).AssignableTo(paramType) {
-			allParams[i] = reflect.ValueOf(ctx)
-			continue
-		}
-
-		if reflect.TypeOf(receiver).AssignableTo(paramType) {
-			allParams[i] = reflect.ValueOf(receiver)
-			continue
+		for j := 0; j < len(typedParams); j++ {
+			typedParam := typedParams[j]
+			if reflect.TypeOf(typedParam).AssignableTo(paramType) {
+				allParams[i] = reflect.ValueOf(typedParam)
+				continue outer
+			}
 		}
 
 		param := reflect.New(paramType)
