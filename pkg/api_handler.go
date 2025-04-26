@@ -116,8 +116,8 @@ func (ah *ApiHandler) ServeHTTP(writer http.ResponseWriter, request *http.Reques
 	}
 
 	if callChecker, ok := api.(CallChecker); ok {
-		if functionName == "GetTypedParameters" {
-			MarshalError(errors.New("GetTypedParameters function is not allowed"), writer)
+		if functionName == "CheckCall" {
+			MarshalError(errors.New("CheckCall function is not allowed"), writer)
 			return
 		}
 		tp, err := callChecker.CheckCall(request, functionName)
