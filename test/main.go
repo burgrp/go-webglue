@@ -27,10 +27,10 @@ func (api *TestApi) Div(a int, b int) (any, any, error) {
 	return a / b, a % b, nil
 }
 
-func (api *TestApi) GetTypedParameters(request *http.Request) []any {
+func (api *TestApi) GetTypedParameters(request *http.Request, functionName string) ([]any, error) {
 	return []any{
 		AgentName(request.Header.Get("User-Agent")),
-	}
+	}, nil
 }
 
 func (api *TestApi) Greet(ctx context.Context, agent AgentName, in struct {
