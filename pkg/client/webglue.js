@@ -241,7 +241,7 @@ async function startAsync() {
 		(module.events || []).forEach(eventName => {
 			let initcap = s => s.charAt(0).toUpperCase() + s.slice(1);
 			let methodName = "on" + (moduleName ? initcap(moduleName) : "") + initcap(eventName);
-			let jqName = "webglue." + (moduleName ? moduleName + "." : "") + eventName;
+			let jqName = "webglue-" + (moduleName ? moduleName + "-" : "") + eventName;
 			$.fn[methodName] = function (handler) {
 				this.on(jqName, (e, ...args) => {
 					if (e.currentTarget === e.target) {
@@ -265,7 +265,7 @@ async function startAsync() {
 			eventSource.onmessage = e => {
 				try {
 					let data = JSON.parse(e.data);
-					$("*").trigger(`webglue.${data.module}.${data.name}`, data.params);
+					$("*").trigger(`webglue-${data.module}-${data.name}`, data.params);
 				} catch (err) {
 					console.error("Error processing event:", err);
 				}
