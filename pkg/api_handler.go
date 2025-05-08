@@ -1,12 +1,13 @@
 package webglue
 
 import (
-	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
 	"reflect"
 	"strings"
+
+	json "github.com/json-iterator/go"
 )
 
 const (
