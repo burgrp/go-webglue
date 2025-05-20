@@ -5,8 +5,6 @@ import (
 	"net/http"
 )
 
-type ApiFunction func(request []byte) ([]byte, error)
-
 type Module struct {
 	Name      string
 	Resources *embed.FS

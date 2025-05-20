@@ -5,6 +5,7 @@ import (
 	"embed"
 	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	webglue "github.com/burgrp/go-webglue/pkg"
@@ -17,6 +18,8 @@ type TestApi struct {
 	Counter int
 }
 
+type AgentName string
+
 func (api *TestApi) Div(a int, b int) (any, any, error) {
 	if b == 0 {
 		return 0, 0, errors.New("division by zero")
@@ -24,18 +27,21 @@ func (api *TestApi) Div(a int, b int) (any, any, error) {
 	return a / b, a % b, nil
 }
 
-func (api *TestApi) Greet(ctx context.Context, in struct {
+func (api *TestApi) CheckCall(request *http.Request, functionName string) ([]any, error) {
+	return []any{
+		AgentName(request.Header.Get("User-Agent")),
+	}, nil
+}
+
+func (api *TestApi) Greet(ctx context.Context, agent AgentName, in struct {
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
 }) []string {
 	return []string{
 		"Hello, " + in.FirstName + " " + in.LastName + "!",
 		"Hi, " + in.FirstName + " " + in.LastName + "!",
+		"Our agent is " + strings.Split(string(agent), " ")[0] + ".",
 	}
-}
-
-func (api *TestApi) GetId() string {
-	return "not implemented"
 }
 
 func (api *TestApi) Inc(inc int) int {

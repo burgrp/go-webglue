@@ -142,7 +142,7 @@ async function goto(url, current) {
 		let redirection = await page.check(url, params);
 		if (redirection) {
 			render = false;
-			await this.goto(redirection, url);
+			await goto(redirection, url);
 		}
 	}
 
@@ -190,32 +190,33 @@ async function startAsync() {
 
 	/**** server API ****/
 
-	let pingIntervalSec;
-
-	async function callApiEndpoint({ method, suffix, body }) {
-		let sessionId = localStorage.getItem("Webglue-Session");
-		let apiResponse = await fetch("api/" + suffix, {
-			method,
-			headers: {
-				"Content-Type": "application/json",
-				...sessionId ? {
-					"Webglue-Session": sessionId
-				} : {}
-			},
-			body: JSON.stringify(body),
-		});
-		sessionId = apiResponse.headers.get("Webglue-Session");
-		localStorage.setItem("Webglue-Session", sessionId);
-		pingIntervalSec = Number.parseInt(apiResponse.headers.get("Webglue-Ping"));
-		return method == "HEAD" ? undefined : await apiResponse.json();
-	}
-
 	async function callApiFunction(moduleName, functionName, ...params) {
-		let apiResponse = await callApiEndpoint({
+
+		let headers = {};
+
+		function addHeaders(storage) {
+			const prefix = "webglue.headers.";
+			for (let i = 0; i < storage.length; i++) {
+				const key = storage.key(i);
+				const value = storage.getItem(key);
+				if (key.startsWith(prefix)) {
+					headers[key.slice(prefix.length)] = value;
+				}
+			}
+		}
+
+		addHeaders(localStorage);
+		addHeaders(sessionStorage);
+
+		let apiResponse = await fetch("api/" + moduleName + "/" + functionName, {
 			method: "POST",
-			suffix: moduleName + "/" + functionName,
-			body: params
+			headers: {
+				...headers,
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(params)
 		});
+		apiResponse = await apiResponse.json();
 		if (apiResponse.error) {
 			throw new Error(apiResponse.error);
 		} else {
@@ -228,12 +229,14 @@ async function startAsync() {
 	api = Object.fromEntries(
 		Object.entries(modules).map(([moduleName, module]) => [
 			moduleName,
-			Object.fromEntries(
-				(module.functions || []).map(functionName => [
-					functionName,
-					(...params) => callApiFunction(moduleName, functionName, ...params)
-				])
-			)
+			{
+				...Object.fromEntries(
+					(module.functions || []).map(functionName => [
+						functionName,
+						(...params) => callApiFunction(moduleName, functionName, ...params)
+					])
+				)
+			}
 		])
 	)
 
@@ -241,7 +244,7 @@ async function startAsync() {
 		(module.events || []).forEach(eventName => {
 			let initcap = s => s.charAt(0).toUpperCase() + s.slice(1);
 			let methodName = "on" + (moduleName ? initcap(moduleName) : "") + initcap(eventName);
-			let jqName = "webglue." + (moduleName ? moduleName + "." : "") + eventName;
+			let jqName = "webglue-" + (moduleName ? moduleName + "-" : "") + eventName;
 			$.fn[methodName] = function (handler) {
 				this.on(jqName, (e, ...args) => {
 					if (e.currentTarget === e.target) {
@@ -265,7 +268,7 @@ async function startAsync() {
 			eventSource.onmessage = e => {
 				try {
 					let data = JSON.parse(e.data);
-					$("*").trigger(`webglue.${data.module}.${data.name}`, data.params);
+					$("*").trigger(`webglue-${data.module}-${data.name}`, data.params);
 				} catch (err) {
 					console.error("Error processing event:", err);
 				}
@@ -275,25 +278,6 @@ async function startAsync() {
 
 	checkEventSource();
 	setInterval(checkEventSource, 1000);
-
-
-	// DISABLED TILL WE NEED IT FOR SESSION KEEPALIVE
-	// async function pingLoop() {
-	// 	while (true) {
-	// 		try {
-	// 			await callApiEndpoint({
-	// 				method: "HEAD",
-	// 			});
-	// 		} catch (err) {
-	// 			console.error("Error in ping loop:", err);
-	// 		}
-	// 		await new Promise((resolve, reject) => { setTimeout(resolve, pingIntervalSec * 1000); });
-	// 	}
-	// }
-
-	// pingLoop().catch(err => {
-	// 	console.error("Unhandled error in ping loop:", err);
-	// });
 
 	/**** and the UI ****/
 

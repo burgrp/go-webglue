@@ -65,17 +65,8 @@ export default {
                     DIV("notes").text("Service parameters and reurn values may be arrays or objects. If the go function returns more than one result, it is returned as array.")
                 ]
             }),
-            DIV("test sessionid", [
-                DIV("label").text("Session ID"),
-                DIV("line", [
-                    DIV(async d => {
-                        d.text(await api.test.getId());
-                    }),
-                ]),
-                DIV("notes").text("The getId function returns the session ID. The session ID is stored in the browser's local storage, so it is preserved even if you refresh the page.")
-            ]),
             DIV("test", [
-                DIV("label").text("Server session test"),
+                DIV("label").text("Server instance test"),
                 DIV("line", () => {
                     let divCounter;
                     return [
@@ -95,7 +86,7 @@ export default {
                         ])
                     ]
                 }),
-                DIV("notes").text("The inc function increments a counter in the server session. The counter is stored in the session, so it is incremented even if you refresh the page.")
+                DIV("notes").text("The inc function increments a counter in the server API instance. The counter is stored in the API instance, so it is incremented even if you refresh the page.")
             ]),
             DIV("test", [
                 DIV("label").text("Server events"),
