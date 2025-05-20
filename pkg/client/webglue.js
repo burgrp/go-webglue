@@ -190,7 +190,24 @@ async function startAsync() {
 
 	/**** server API ****/
 
-	async function callApiFunction(moduleName, functionName, headers, ...params) {
+	async function callApiFunction(moduleName, functionName, ...params) {
+
+		let headers = {};
+
+		function addHeaders(storage) {
+			const prefix = "webglue.headers.";
+			for (let i = 0; i < storage.length; i++) {
+				const key = storage.key(i);
+				const value = storage.getItem(key);
+				if (key.startsWith(prefix)) {
+					headers[key.slice(prefix.length)] = value;
+				}
+			}
+		}
+
+		addHeaders(localStorage);
+		addHeaders(sessionStorage);
+
 		let apiResponse = await fetch("api/" + moduleName + "/" + functionName, {
 			method: "POST",
 			headers: {
@@ -213,11 +230,10 @@ async function startAsync() {
 		Object.entries(modules).map(([moduleName, module]) => [
 			moduleName,
 			{
-				headers: {},
 				...Object.fromEntries(
 					(module.functions || []).map(functionName => [
 						functionName,
-						(...params) => callApiFunction(moduleName, functionName, api[moduleName].headers, ...params)
+						(...params) => callApiFunction(moduleName, functionName, ...params)
 					])
 				)
 			}
