@@ -12,7 +12,7 @@ Perfect for control panels, monitoring tools, device interfaces, and internal ut
 
 ## Easy to use
 
-A Go web framework that automatically bridges backend and frontend code. Expose Go struct methods as HTTP APIs, stream real-time events via SSE, and serve optimized static resources with zero configuration.
+go-webglue bridges backend and frontend code. Expose Go struct methods as HTTP APIs, stream real-time events via SSE, and serve optimized static resources with zero configuration.
 
 ```go
 // Backend: Define your API
