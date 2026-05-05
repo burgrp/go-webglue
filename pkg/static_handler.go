@@ -2,6 +2,7 @@ package webglue
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"mime"
 	"net/http"
@@ -10,6 +11,7 @@ import (
 	"sort"
 	"strings"
 
+	json "github.com/json-iterator/go"
 	"github.com/tdewolff/minify/v2"
 	"github.com/tdewolff/minify/v2/css"
 	"github.com/tdewolff/minify/v2/html"
@@ -50,9 +52,19 @@ const (
 //   - Production: serves minified, cached resources from embedded filesystems
 //   - Development: serves files directly from the filesystem for hot reload
 type StaticHandler struct {
-	indexHtml   string            // Processed HTML with import map injected
-	cachedFiles map[string][]byte // Minified resources cached in memory
-	devFiles    map[string]string // File paths for development mode
+	indexHtml     string            // Processed HTML with import map injected
+	cachedFiles   map[string][]byte // Minified resources cached in memory
+	devFiles      map[string]string // File paths for development mode
+	workspacePath string            // Optional path for DevTools workspace integration
+}
+
+// DevTools integration: serve workspace configuration for Chrome DevTools when requested
+type WorkspaceJson struct {
+	Workspace WorkspaceJsonWorkspace `json:"workspace"`
+}
+type WorkspaceJsonWorkspace struct {
+	Root string `json:"root"`
+	UUID string `json:"uuid"`
 }
 
 // ServeHTTP handles static file requests.
@@ -68,6 +80,22 @@ func (handler *StaticHandler) ServeHTTP(writer http.ResponseWriter, request *htt
 	filePath, ok := handler.devFiles[webPath]
 	if ok {
 		http.ServeFile(writer, request, filePath)
+		return
+	}
+
+	if webPath == "/.well-known/appspecific/com.chrome.devtools.json" && handler.workspacePath != "" {
+		workspace := WorkspaceJson{
+			Workspace: WorkspaceJsonWorkspace{
+				Root: handler.workspacePath,
+				UUID: stringToUUID(handler.workspacePath),
+			},
+		}
+		writer.Header().Set(ContentTypeHeader, ContentTypeJson)
+		err := json.NewEncoder(writer).Encode(workspace)
+		if err != nil {
+			http.Error(writer, "Failed to encode workspace JSON", http.StatusInternalServerError)
+			return
+		}
 		return
 	}
 
@@ -88,11 +116,11 @@ func (handler *StaticHandler) ServeHTTP(writer http.ResponseWriter, request *htt
 
 // newStaticHandler creates a static file handler with automatic resource processing.
 // It performs the following:
-//   1. Scans all module resources
-//   2. Minifies CSS, JS, HTML, JSON, SVG, XML
-//   3. Generates import map for ES modules
-//   4. Injects stylesheet links and import map into HTML
-//   5. Caches everything in memory (unless in dev mode)
+//  1. Scans all module resources
+//  2. Minifies CSS, JS, HTML, JSON, SVG, XML
+//  3. Generates import map for ES modules
+//  4. Injects stylesheet links and import map into HTML
+//  5. Caches everything in memory (unless in dev mode)
 //
 // Development mode is activated by setting environment variable: {MODULENAME}_DEV=/path/to/files
 func newStaticHandler(allModules []*Module, indexHtml string) (*StaticHandler, error) {
@@ -106,6 +134,8 @@ func newStaticHandler(allModules []*Module, indexHtml string) (*StaticHandler, e
 
 	cachedFiles := map[string][]byte{}
 	devFiles := map[string]string{}
+	anyDev := false
+	workspacePath := ""
 
 	// Set up minifier for all supported file types
 	mini := minify.New()
@@ -115,8 +145,6 @@ func newStaticHandler(allModules []*Module, indexHtml string) (*StaticHandler, e
 	mini.AddFunc(".js", js.Minify)
 	mini.AddFunc(".json", jsn.Minify)
 	mini.AddFunc(".xml", xml.Minify)
-
-	anyDev := false
 
 	// Process resources from all modules
 	for _, module := range allModules {
@@ -158,6 +186,7 @@ func newStaticHandler(allModules []*Module, indexHtml string) (*StaticHandler, e
 					// Development mode: map URL to filesystem path
 					devFiles["/"+webPath] = devPath + "/" + webPath
 					anyDev = true
+					workspacePath = devPath
 				} else {
 					// Production mode: read, minify, and cache
 					content, err := module.Resources.ReadFile(filePath)
@@ -233,9 +262,26 @@ func newStaticHandler(allModules []*Module, indexHtml string) (*StaticHandler, e
 	}
 
 	return &StaticHandler{
-		indexHtml:   indexHtml,
-		cachedFiles: cachedFiles,
-		devFiles:    devFiles,
+		indexHtml:     indexHtml,
+		cachedFiles:   cachedFiles,
+		devFiles:      devFiles,
+		workspacePath: workspacePath,
 	}, nil
 
+}
+
+func stringToUUID(s string) string {
+	// Simple hash function to generate a UUID-like string from the input
+	hash := 0
+	for _, char := range s {
+		hash = int(char) + ((hash << 5) - hash)
+	}
+	uuid := fmt.Sprintf("%08x-%04x-%04x-%04x-%012x",
+		hash&0xffffffff,
+		(hash>>32)&0xffff,
+		((hash>>48)&0x0fff)|0x4000, // Version 4
+		((hash>>64)&0x3fff)|0x8000, // Variant 1
+		hash&0xffffffffffff,
+	)
+	return uuid
 }
