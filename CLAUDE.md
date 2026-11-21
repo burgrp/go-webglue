@@ -102,7 +102,14 @@ WEBGLUE_DEV=/path/to/pkg/client TEST_DEV=/path/to/test/client go run test/main.g
 ```
 
 ### Testing
-No test files currently exist in the repository.
+Testy jsou v `pkg/`. Spusť je z kořene repozitáře:
+
+```bash
+go test -race ./pkg
+```
+
+Testy SSE ověřují izolaci pomalých klientů, zaplnění fronty, zrušení
+odběru, opětovné připojení, souběžnou publikaci a časové limity zápisů.
 
 ## Key Implementation Patterns
 
@@ -149,7 +156,7 @@ options := webglue.Options{
 ## Dependencies
 
 - `github.com/json-iterator/go`: Fast JSON marshaling (used instead of stdlib)
-- `github.com/r3labs/sse/v2`: Server-Sent Events implementation
+- Standardní `net/http`: SSE s omezenou frontou pro každé spojení
 - `github.com/tdewolff/minify/v2`: Minification for HTML/CSS/JS/JSON/XML/SVG
 - jQuery: Bundled in pkg/client/jquery.js, used for DOM manipulation
 

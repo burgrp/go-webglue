@@ -11,6 +11,26 @@ go-webglue uses Server-Sent Events (SSE) for real-time server-to-client communic
 - **Simple HTTP**: No WebSocket upgrade needed
 - **Multiple Parameters**: Send any JSON-serializable data
 
+## Doručování a pomalí klienti
+
+Každé SSE spojení má vlastní frontu nejvýše **64 událostí**.
+Publikace nečeká na síťový zápis klienta. Pomalé ani odpojené spojení
+proto neblokuje ostatní klienty nebo přihlášení nového odběratele.
+Při zaplnění fronty server odpojí jen příslušné spojení a zapíše varování;
+nepokračuje v něm po tichém vynechání událostí.
+
+Standardní Go HTTP server omezuje jednotlivý zápis a flush na **5 sekund**.
+Po úspěšném flush se limit zruší, aby neukončoval nečinné HTTP/2 spojení.
+Zrušení požadavku, chyba zápisu a ukončení serveru odstraní odběr.
+Opakované připojení nepřehrává dřívější události. Aplikace musí pro úplné
+obnovení stavu použít vlastní API a oznámení o připojení.
+
+Obal `http.ResponseWriter` má poskytovat `Unwrap() http.ResponseWriter`,
+aby `http.ResponseController` mohl nastavit limit podkladového spojení.
+Pokud obal obsluhuje flush, má jeho chyby předávat přes `FlushError() error`.
+Bez podpory časového limitu server zapíše varování a zachová dosavadní
+možnost streamování; izolace front nadále platí, časový limit zápisu však ne.
+
 ## Creating Events
 
 ### Define Events

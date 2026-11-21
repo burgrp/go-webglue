@@ -151,6 +151,11 @@ Responsibilities:
 3. When `event.Emit()` is called, data is broadcast to all connections
 4. Client receives event and triggers jQuery custom events
 
+SSE používá vlastní omezené fronty pro jednotlivá spojení, nikoliv
+sdílenou frontu knihovny `r3labs/sse`. Síťové zápisy probíhají mimo
+sdílené zámky. Podmínky doručení, obnovení a časových limitů popisují
+[události](events.md#doručování-a-pomalí-klienti).
+
 ### 3. Client Library
 
 **Location**: `pkg/client/webglue.js`

@@ -76,9 +76,9 @@ Represents a server-to-client event stream.
 
 ```go
 type Event struct {
-    Module  string       // Auto-populated by framework
-    Name    string       // Event name
-    servers []*sse.Server // Internal
+    Module string // Auto-populated by framework
+    Name   string // Event name
+    // Internal fields omitted.
 }
 ```
 
